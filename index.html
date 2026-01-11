@@ -860,6 +860,11 @@
             const [profileEmail, setProfileEmail] = useState(user.email || '');
             const [profileMsg, setProfileMsg] = useState({type:'', text:''});
 
+            // Password Edit States
+            const [pass, setPass] = useState('');
+            const [confirm, setConfirm] = useState('');
+            const [passMsg, setPassMsg] = useState({type:'', text:''});
+
             useEffect(() => { 
                 if(userData) {
                     setData(d => ({...d, desc: userData.description||'', services: userData.services||[] }));
@@ -907,6 +912,18 @@
                 }
             };
 
+            const handleUpdatePassword = async (e) => {
+                e.preventDefault();
+                if (pass !== confirm) { setPassMsg({ type: 'error', text: 'Passwords do not match' }); return; }
+                try {
+                    await updatePassword(user, pass);
+                    setPassMsg({ type: 'success', text: 'Password updated successfully!' });
+                    setPass(''); setConfirm('');
+                } catch (error) {
+                    setPassMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Security: Please log out and login again to update password.' : error.message });
+                }
+            };
+
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
@@ -924,6 +941,15 @@
                                         <div><label className="block text-sm font-medium">Organization Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
                                         <div><label className="block text-sm font-medium">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
                                         <Button type="submit">Update Info</Button>
+                                    </form>
+                                </Card>
+                                <Card className="p-6">
+                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3>
+                                    <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
+                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{passMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
+                                        <Button type="submit">Update Password</Button>
                                     </form>
                                 </Card>
                             </div>

@@ -10,6 +10,22 @@
     
     <!-- 1. Load Styles (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     
     <!-- 2. Configure Modules (Import Map) -->
     <script type="importmap">
@@ -33,9 +49,14 @@
         .overflow-y-auto::-webkit-scrollbar { width: 6px; }
         .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
         .overflow-y-auto::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .dark .overflow-y-auto::-webkit-scrollbar-thumb { background-color: #4b5563; }
+        
+        body {
+            transition: background-color 0.3s, color 0.3s;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-200">
     <div id="root"></div>
 
     <!-- 4. Your Application Code -->
@@ -74,7 +95,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Activity, Gift // Added Gift icon
+            BookOpen, Users, Activity, Gift, Sun, Moon // Added Sun, Moon icons
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -101,10 +122,10 @@
         const Button = ({ children, onClick, variant = 'primary', className = '', type = 'button', disabled = false }) => {
             const baseStyle = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
             const variants = {
-                primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-md shadow-indigo-200",
-                secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-400",
-                danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 shadow-md shadow-rose-200",
-                ghost: "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-md shadow-indigo-200 dark:shadow-none",
+                secondary: "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-gray-400",
+                danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 shadow-md shadow-rose-200 dark:shadow-none",
+                ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white",
                 success: "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500"
             };
             return (
@@ -115,21 +136,21 @@
         };
 
         const Card = ({ children, className = '' }) => (
-            <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden ${className}`}>
+            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors duration-200 ${className}`}>
                 {children}
             </div>
         );
 
         const Badge = ({ children, color = 'blue' }) => {
             const colors = {
-                blue: 'bg-blue-100 text-blue-800', 
-                green: 'bg-green-100 text-green-800', 
-                red: 'bg-red-100 text-red-800',
-                purple: 'bg-purple-100 text-purple-800', 
-                gray: 'bg-gray-100 text-gray-800', 
-                indigo: 'bg-indigo-100 text-indigo-800',
-                orange: 'bg-orange-100 text-orange-800',
-                yellow: 'bg-yellow-100 text-yellow-800'
+                blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', 
+                green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', 
+                red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', 
+                gray: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', 
+                indigo: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+                orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+                yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
             };
             return <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
         };
@@ -137,22 +158,23 @@
         // --- TERMS MODAL ---
         function TermsModal({ onClose }) {
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
-                        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                <FileText size={20} className="text-indigo-600" /> Platform Policies & Guidelines
+                <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col border dark:border-gray-700">
+                        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 rounded-t-xl">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <FileText size={20} className="text-indigo-600 dark:text-indigo-400" /> Platform Policies & Guidelines
                             </h3>
-                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded p-1 transition-colors"><X size={24} /></button>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-1 transition-colors"><X size={24} /></button>
                         </div>
-                        <div className="p-6 overflow-y-auto text-sm text-gray-700 space-y-6 leading-relaxed">
+                        <div className="p-6 overflow-y-auto text-sm text-gray-700 dark:text-gray-300 space-y-6 leading-relaxed">
+                            {/* Content remains same, text colors handled by parent class */}
                             <div>
-                                <h4 className="font-bold text-lg text-gray-900 mb-2">Shades of Hue: Official Platform Policies and Guidelines</h4>
+                                <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">Shades of Hue: Official Platform Policies and Guidelines</h4>
                                 <p>These policies govern the conduct of all users, customers, and partnered organizations within the Shades of Hue platform.</p>
                             </div>
                             
                             <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">I. Core Principles and Code of Conduct</h4>
+                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">I. Core Principles and Code of Conduct</h4>
                                 <p>These principles are the foundation of our community and mandate the highest standards of professional and ethical behavior.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Mission Alignment:</strong> All panel organizations must actively align with the mission of supporting and empowering the queer community. Adherence to a strict Non-Discrimination Policy based on sexual orientation, gender identity, religion, background, or ability is mandatory.</li>
@@ -162,7 +184,7 @@
                             </div>
 
                             <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">II. Customer Privacy and Data Protection Policy</h4>
+                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">II. Customer Privacy and Data Protection Policy</h4>
                                 <p>Protecting the highly sensitive information of our users is our top priority.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Anonymity & Confidentiality:</strong> User data is encrypted and handled in strict confidence. Customers have the right to maintain a degree of anonymity until they choose to share further details directly with a partner organization.</li>
@@ -172,7 +194,7 @@
                             </div>
 
                             <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">III. Service Request Management and Service Level Agreement (SLA)</h4>
+                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">III. Service Request Management and Service Level Agreement (SLA)</h4>
                                 <p>These rules define the required response times and communication standards for partner organizations.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Request Acceptance Window:</strong> Partner organizations must review all submitted customer requests and issue a definitive Accept or Decline decision within a maximum period of 10 business days (1 to 2 weeks) from the time the request is assigned.</li>
@@ -180,9 +202,9 @@
                                     <li><strong>Optimal Matching Commitment:</strong> Shades of Hue commits to matching customers with the most suitable partner based on the customer’s needs and the organization’s expertise, ensuring a targeted and high-quality connection.</li>
                                 </ul>
                             </div>
-
-                            <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">IV. Accountability and Quality Assurance (Three-Strike Policy)</h4>
+                            
+                             <div>
+                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">IV. Accountability and Quality Assurance (Three-Strike Policy)</h4>
                                 <p>This system ensures high service standards while providing a fair process for resolving conflicts.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Grounds for a Strike:</strong> A strike may be issued to a partner organization for instances of failure to satisfy a customer’s essential needs or if a customer issue significantly escalates due to negligence, prolonged unresponsiveness, or poor conduct.</li>
@@ -193,7 +215,7 @@
                             </div>
 
                             <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">V. Ethical Conduct, Partner Protection, and Termination</h4>
+                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">V. Ethical Conduct, Partner Protection, and Termination</h4>
                                 <p>These rules protect the platform's ecosystem and ensure fair operating procedures for all partners.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Zero-Tolerance for Customer Poaching:</strong> Any attempt by a partner organization to solicit, recruit, or poach a customer outside of the Shades of Hue platform—where the initial engagement was facilitated and monitored via our app’s chat—will result in the immediate and permanent termination of the organization's account and its listing.</li>
@@ -202,7 +224,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                        <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl flex justify-end">
                             <Button onClick={onClose}>Close</Button>
                         </div>
                     </div>
@@ -238,35 +260,35 @@
             }
 
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border dark:border-gray-700">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <Heart className="text-rose-600 fill-rose-600" size={24}/> Make a Donation
                             </h3>
-                            <button onClick={onClose}><X size={20} /></button>
+                            <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><X size={20} /></button>
                         </div>
                         
                         {step === 1 ? (
                             <form onSubmit={handleNext} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                                    <input className="w-full p-2 border rounded" value={name} onChange={e=>setName(e.target.value)} required placeholder="Enter your name" />
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Name</label>
+                                    <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none" value={name} onChange={e=>setName(e.target.value)} required placeholder="Enter your name" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-                                    <input type="number" className="w-full p-2 border rounded" value={amount} onChange={e=>setAmount(e.target.value)} required placeholder="Enter amount" />
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (₹)</label>
+                                    <input type="number" className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none" value={amount} onChange={e=>setAmount(e.target.value)} required placeholder="Enter amount" />
                                 </div>
-                                <Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 focus:ring-rose-500 shadow-rose-200">Proceed to Pay</Button>
+                                <Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 focus:ring-rose-500 shadow-rose-200 dark:shadow-none text-white">Proceed to Pay</Button>
                             </form>
                         ) : (
                             <div className="space-y-4">
-                                <div className="bg-indigo-50 p-4 rounded-lg text-center border border-indigo-100">
-                                    <p className="text-sm text-gray-600 mb-2">Scan QR or use UPI ID</p>
-                                    <div className="font-mono font-bold text-xl text-indigo-700 select-all p-2 bg-white rounded border border-indigo-200">{UPI_ID}</div>
-                                    <p className="text-xs text-gray-500 mt-2">Paying: <span className="font-bold text-gray-900">₹{amount}</span></p>
+                                <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg text-center border border-indigo-100 dark:border-indigo-800">
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Scan QR or use UPI ID</p>
+                                    <div className="font-mono font-bold text-xl text-indigo-700 dark:text-indigo-400 select-all p-2 bg-white dark:bg-gray-800 rounded border border-indigo-200 dark:border-indigo-700">{UPI_ID}</div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Paying: <span className="font-bold text-gray-900 dark:text-white">₹{amount}</span></p>
                                 </div>
-                                <p className="text-xs text-center text-gray-500">Click below once you have completed the transaction in your UPI app.</p>
+                                <p className="text-xs text-center text-gray-500 dark:text-gray-400">Click below once you have completed the transaction in your UPI app.</p>
                                 <Button onClick={handleDone} variant="success" className="w-full">Payment Done</Button>
                                 <Button onClick={()=>setStep(1)} variant="ghost" className="w-full text-xs">Back</Button>
                             </div>
@@ -283,6 +305,28 @@
             const [userData, setUserData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [view, setView] = useState('home'); 
+            
+            // Theme Management
+            const [theme, setTheme] = useState(() => {
+                if (typeof window !== 'undefined') {
+                    return localStorage.getItem('theme') || 'light';
+                }
+                return 'light';
+            });
+
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                } else {
+                    root.classList.remove('dark');
+                }
+                localStorage.setItem('theme', theme);
+            }, [theme]);
+
+            const toggleTheme = () => {
+                setTheme(prev => prev === 'light' ? 'dark' : 'light');
+            };
 
             useEffect(() => {
                 const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -352,11 +396,15 @@
 
             const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
 
-            if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+            if (loading) return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+                </div>
+            );
 
             return (
-                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-                    <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} />
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-200">
+                    <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} theme={theme} toggleTheme={toggleTheme} />
                     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
                         {view === 'login' && <Login onNavigate={setView} />}
@@ -370,17 +418,17 @@
         }
 
         // --- SHARED COMPONENTS ---
-        function Navbar({ user, role, onNavigate, onSignOut, currentView }) {
+        function Navbar({ user, role, onNavigate, onSignOut, currentView, theme, toggleTheme }) {
             const [isOpen, setIsOpen] = useState(false);
             const NavLink = ({ target, label, icon: Icon }) => (
-                <button onClick={() => { onNavigate(target); setIsOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === target ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>
+                <button onClick={() => { onNavigate(target); setIsOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === target ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}>
                     {Icon && <Icon size={16} />} {label}
                 </button>
             );
             const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'User';
 
             return (
-                <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+                <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-200">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16">
                             <div className="flex items-center">
@@ -399,33 +447,40 @@
                                 ) : (
                                     <>
                                         {role && <NavLink target="dashboard" label={`${roleLabel} Dashboard`} icon={Briefcase} />}
-                                        <div className="border-l border-gray-300 h-6 mx-2"></div>
+                                        <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-2"></div>
                                         <div className="flex items-center gap-3">
                                             <div className="text-right hidden lg:block">
-                                                <p className="text-sm font-medium text-gray-900">{user.email}</p>
-                                                <p className="text-xs text-gray-500 capitalize">{role || '...'}</p>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{role || '...'}</p>
                                             </div>
                                             <Button variant="secondary" onClick={onSignOut} className="!px-3"><LogOut size={16} /></Button>
                                         </div>
                                     </>
                                 )}
+                                <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-2"></div>
+                                <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" aria-label="Toggle Theme">
+                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                                </button>
                             </div>
-                            <div className="flex items-center md:hidden">
-                                <button onClick={() => setIsOpen(!isOpen)} className="text-gray-600 hover:text-gray-900 p-2">{isOpen ? <X size={24} /> : <Menu size={24} />}</button>
+                            <div className="flex items-center md:hidden gap-3">
+                                <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
+                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                                </button>
+                                <button onClick={() => setIsOpen(!isOpen)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white p-2">{isOpen ? <X size={24} /> : <Menu size={24} />}</button>
                             </div>
                         </div>
                     </div>
                     {isOpen && (
-                        <div className="md:hidden bg-white border-b border-gray-200 px-2 pt-2 pb-3 space-y-1">
+                        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 pt-2 pb-3 space-y-1">
                             <NavLink target="home" label="Home" icon={Newspaper} />
                             {user && role && <NavLink target="dashboard" label="Dashboard" icon={Briefcase} />}
                             {!user ? (
-                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100">
+                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700">
                                     <Button variant="secondary" onClick={() => { onNavigate('login'); setIsOpen(false); }}>Sign In</Button>
                                     <Button variant="primary" onClick={() => { onNavigate('signup'); setIsOpen(false); }}>Join Us</Button>
                                 </div>
                             ) : (
-                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100"><Button variant="danger" onClick={() => { onSignOut(); setIsOpen(false); }}>Sign Out</Button></div>
+                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700"><Button variant="danger" onClick={() => { onSignOut(); setIsOpen(false); }}>Sign Out</Button></div>
                             )}
                         </div>
                     )}
@@ -475,25 +530,25 @@
             };
 
             return (
-                <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 overflow-hidden">
-                    <div className="bg-indigo-600 text-white p-4 flex justify-between items-center shrink-0">
+                <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden">
+                    <div className="bg-indigo-600 dark:bg-indigo-700 text-white p-4 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2"><MessageCircle size={20} /><span className="font-bold truncate">{getOtherParticipantName()}</span></div>
-                        <button onClick={onClose} className="hover:bg-indigo-700 p-1 rounded"><X size={18} /></button>
+                        <button onClick={onClose} className="hover:bg-indigo-700 dark:hover:bg-indigo-600 p-1 rounded"><X size={18} /></button>
                     </div>
-                    <div className="flex-grow p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+                    <div className="flex-grow p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col gap-3">
                         {messages.map((msg) => {
                             const isMe = msg.senderId === currentUser.uid;
                             return (
-                                <div key={msg.id} className={`max-w-[80%] p-3 rounded-lg text-sm ${isMe ? 'bg-indigo-100 text-indigo-900 self-end rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 self-start rounded-bl-none'}`}>
+                                <div key={msg.id} className={`max-w-[80%] p-3 rounded-lg text-sm ${isMe ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100 self-end rounded-br-none' : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 self-start rounded-bl-none'}`}>
                                     <p>{msg.text}</p>
-                                    <p className={`text-[10px] mt-1 ${isMe ? 'text-indigo-400' : 'text-gray-400'}`}>{msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</p>
+                                    <p className={`text-[10px] mt-1 ${isMe ? 'text-indigo-400 dark:text-indigo-300' : 'text-gray-400 dark:text-gray-400'}`}>{msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</p>
                                 </div>
                             );
                         })}
                         <div ref={bottomRef} />
                     </div>
-                    <form onSubmit={sendMessage} className="p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
-                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 shrink-0">
+                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-grow px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
                         <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Send size={18} /></button>
                     </form>
                 </div>
@@ -530,23 +585,23 @@
             return (
                 <div className="space-y-6">
                     <Card className="p-6">
-                        <h3 className="font-bold mb-4">Submit Grievance</h3>
+                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Submit Grievance</h3>
                         <form onSubmit={submitGrievance} className="space-y-4">
-                            <input className="w-full p-2 border rounded" placeholder="Subject" value={subject} onChange={e=>setSubject(e.target.value)} required />
-                            <textarea className="w-full p-2 border rounded" rows={3} placeholder="Describe your issue..." value={description} onChange={e=>setDescription(e.target.value)} required />
+                            <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Subject" value={subject} onChange={e=>setSubject(e.target.value)} required />
+                            <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Describe your issue..." value={description} onChange={e=>setDescription(e.target.value)} required />
                             <Button type="submit">Submit</Button>
                         </form>
                     </Card>
                     <Card className="p-6">
-                        <h3 className="font-bold mb-4">My Grievances</h3>
+                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">My Grievances</h3>
                         <div className="space-y-2">
                             {grievances.map(g => (
-                                <div key={g.id} className="p-3 border rounded bg-gray-50">
-                                    <div className="flex justify-between font-bold"><span>{g.subject}</span><Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
-                                    <p className="text-sm mt-1">{g.description}</p>
+                                <div key={g.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50">
+                                    <div className="flex justify-between font-bold text-gray-900 dark:text-white"><span>{g.subject}</span><Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
+                                    <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">{g.description}</p>
                                 </div>
                             ))}
-                            {grievances.length===0 && <p className="text-gray-500">No records found.</p>}
+                            {grievances.length===0 && <p className="text-gray-500 dark:text-gray-400">No records found.</p>}
                         </div>
                     </Card>
                 </div>
@@ -570,8 +625,8 @@
                 <div className="space-y-12 relative">
                     {showDonate && <DonationModal onClose={() => setShowDonate(false)} />}
                     <section className="text-center space-y-6 py-12">
-                        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 tracking-tight">Empowering the <span className="text-indigo-600">Queer Community</span></h1>
-                        <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-600">Connecting you with inclusive services, supportive organizations, and a community that cares.</p>
+                        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight">Empowering the <span className="text-indigo-600 dark:text-indigo-400">Queer Community</span></h1>
+                        <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-600 dark:text-gray-300">Connecting you with inclusive services, supportive organizations, and a community that cares.</p>
                         <div className="flex justify-center gap-4 flex-wrap">
                             {!user && (
                                 <>
@@ -581,7 +636,7 @@
                             )}
                             <button 
                                 onClick={() => setShowDonate(true)}
-                                className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-200 transition-all"
+                                className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-200 dark:shadow-none transition-all"
                             >
                                 <Heart className="fill-white" size={20} /> Donate
                             </button>
@@ -590,21 +645,21 @@
                     
                     {/* Mission & Vision */}
                     <div className="grid md:grid-cols-2 gap-8">
-                        <Card className="p-8 bg-gradient-to-br from-indigo-50 to-white border-indigo-100">
-                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><Heart size={24} /></div><h2 className="text-2xl font-bold text-gray-900">Our Mission</h2></div>
-                            <p className="text-gray-600 leading-relaxed">To provide a safe, accessible, and affirmative platform for Queer individuals to access essential services.</p>
+                        <Card className="p-8 bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border-indigo-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400"><Heart size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Mission</h2></div>
+                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">To provide a safe, accessible, and affirmative platform for Queer individuals to access essential services.</p>
                         </Card>
-                        <Card className="p-8 bg-gradient-to-br from-purple-50 to-white border-purple-100">
-                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-purple-100 rounded-lg text-purple-600"><Shield size={24} /></div><h2 className="text-2xl font-bold text-gray-900">Our Vision</h2></div>
-                            <p className="text-gray-600 leading-relaxed">A world where every Queer individual has equal access to healthcare, legal aid, housing, and community support.</p>
+                        <Card className="p-8 bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-purple-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-purple-600 dark:text-purple-400"><Shield size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Vision</h2></div>
+                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">A world where every Queer individual has equal access to healthcare, legal aid, housing, and community support.</p>
                         </Card>
                     </div>
 
-                    {/* Services Section - ADDED HERE */}
+                    {/* Services Section */}
                     <section className="py-8">
                         <div className="text-center mb-8">
-                          <h2 className="text-3xl font-bold text-gray-900">Our Services</h2>
-                          <p className="text-gray-600 mt-2">Holistic support for the community.</p>
+                          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Our Services</h2>
+                          <p className="text-gray-600 dark:text-gray-400 mt-2">Holistic support for the community.</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                           {[
@@ -613,26 +668,26 @@
                             { icon: Users, title: "Inclusivity Workshops", desc: "Sensitization and awareness sessions for organizations." },
                             { icon: Heart, title: "Mental Health", desc: "Counseling and support groups for emotional well-being." }
                           ].map((s, i) => (
-                            <Card key={i} className="p-6 text-center hover:shadow-md transition-shadow">
-                              <div className="w-12 h-12 mx-auto bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-4">
+                            <Card key={i} className="p-6 text-center hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-750 transition-all">
+                              <div className="w-12 h-12 mx-auto bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
                                 <s.icon size={24} />
                               </div>
-                              <h3 className="font-bold text-lg text-gray-900 mb-2">{s.title}</h3>
-                              <p className="text-sm text-gray-600">{s.desc}</p>
+                              <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2">{s.title}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{s.desc}</p>
                             </Card>
                           ))}
                         </div>
                     </section>
 
                     <section>
-                        <div className="flex items-center gap-3 mb-6"><Newspaper className="text-indigo-600" /><h2 className="text-2xl font-bold text-gray-900">Latest Updates</h2></div>
+                        <div className="flex items-center gap-3 mb-6"><Newspaper className="text-indigo-600 dark:text-indigo-400" /><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest Updates</h2></div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {news.length > 0 ? news.map(item => (
-                                <Card key={item.id} className="p-6 flex flex-col h-full hover:shadow-md transition-shadow">
-                                    <div className="mb-4"><span className="text-xs font-medium text-gray-500">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span><h3 className="text-xl font-bold text-gray-900 mt-1">{item.title}</h3></div>
-                                    <p className="text-gray-600 text-sm flex-grow whitespace-pre-wrap">{item.content}</p>
+                                <Card key={item.id} className="p-6 flex flex-col h-full hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-750 transition-all">
+                                    <div className="mb-4"><span className="text-xs font-medium text-gray-500 dark:text-gray-400">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span><h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{item.title}</h3></div>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm flex-grow whitespace-pre-wrap">{item.content}</p>
                                 </Card>
-                            )) : <div className="col-span-full text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300 text-gray-500">No news updates yet. Stay tuned!</div>}
+                            )) : <div className="col-span-full text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400">No news updates yet. Stay tuned!</div>}
                         </div>
                     </section>
                 </div>
@@ -647,14 +702,14 @@
             return (
                 <div className="max-w-md mx-auto mt-12">
                     <Card className="p-8">
-                        <div className="text-center mb-8"><h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2><p className="text-gray-500 mt-2">Sign in to your account</p></div>
+                        <div className="text-center mb-8"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</h2><p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to your account</p></div>
                         <form onSubmit={handleLogin} className="space-y-6">
-                            {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
-                            <input type="email" placeholder="Email Address" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={email} onChange={(e) => setEmail(e.target.value)} />
-                            <input type="password" placeholder="Password" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={password} onChange={(e) => setPassword(e.target.value)} />
+                            {error && <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg">{error}</div>}
+                            <input type="email" placeholder="Email Address" required className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={email} onChange={(e) => setEmail(e.target.value)} />
+                            <input type="password" placeholder="Password" required className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={password} onChange={(e) => setPassword(e.target.value)} />
                             <Button type="submit" className="w-full">Sign In</Button>
                         </form>
-                        <p className="text-center mt-6 text-sm text-gray-600">Don't have an account? <button onClick={() => onNavigate('signup')} className="text-indigo-600 font-medium hover:underline">Sign up</button></p>
+                        <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">Don't have an account? <button onClick={() => onNavigate('signup')} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Sign up</button></p>
                     </Card>
                 </div>
             );
@@ -699,14 +754,14 @@
             return (
                 <div className="max-w-md mx-auto mt-12">
                     <Card className="p-8">
-                        <div className="text-center mb-8"><h2 className="text-2xl font-bold text-gray-900">Join Shades of Hue</h2><p className="text-gray-500 mt-2">Create your account today</p></div>
+                        <div className="text-center mb-8"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Join Shades of Hue</h2><p className="text-gray-500 dark:text-gray-400 mt-2">Create your account today</p></div>
                         <form onSubmit={handleSignup} className="space-y-6">
-                            {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
-                            <input type="text" placeholder="Full Name" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={name} onChange={(e) => setName(e.target.value)} />
-                            <input type="email" placeholder="Email Address" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={email} onChange={(e) => setEmail(e.target.value)} />
-                            <input type="password" placeholder="Password (min 6 chars)" required minLength={6} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={password} onChange={(e) => setPassword(e.target.value)} />
+                            {error && <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg">{error}</div>}
+                            <input type="text" placeholder="Full Name" required className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={name} onChange={(e) => setName(e.target.value)} />
+                            <input type="email" placeholder="Email Address" required className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={email} onChange={(e) => setEmail(e.target.value)} />
+                            <input type="password" placeholder="Password (min 6 chars)" required minLength={6} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={password} onChange={(e) => setPassword(e.target.value)} />
                             
-                            <div className="flex items-start gap-2 text-sm text-gray-600 px-1">
+                            <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 px-1">
                                 <input 
                                     type="checkbox" 
                                     id="terms" 
@@ -715,13 +770,13 @@
                                     className="mt-1"
                                 />
                                 <label htmlFor="terms">
-                                    I agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-indigo-600 hover:underline font-medium">Terms and Conditions</button>
+                                    I agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">Terms and Conditions</button>
                                 </label>
                             </div>
 
                             <Button type="submit" className="w-full">Sign Up</Button>
                         </form>
-                        <p className="text-center mt-6 text-sm text-gray-600">Already have an account? <button onClick={() => onNavigate('login')} className="text-indigo-600 font-medium hover:underline">Sign in</button></p>
+                        <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">Already have an account? <button onClick={() => onNavigate('login')} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Sign in</button></p>
                     </Card>
                     {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
                 </div>
@@ -731,11 +786,11 @@
         // --- ADMIN DASHBOARD ---
         function AdminDashboard({ user }) {
             const [activeTab, setActiveTab] = useState('users');
-            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}><Icon size={18} />{label}</button>;
+            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}><Icon size={18} />{label}</button>;
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1 space-y-4">
-                        <Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Admin Controls</h3><div className="space-y-1">
+                        <Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Admin Controls</h3><div className="space-y-1">
                             <SidebarBtn icon={User} label="Manage Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
                             <SidebarBtn icon={Plus} label="Create Account" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
                             <SidebarBtn icon={Activity} label="Request Monitor" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
@@ -770,27 +825,27 @@
 
             return (
                 <Card className="p-6">
-                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                         <Gift size={20} className="text-rose-600" /> Donations Received
                     </h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b text-gray-500 bg-gray-50/50">
+                                <tr className="border-b text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-700/50">
                                     <th className="p-3">Date</th>
                                     <th className="p-3">Donor Name</th>
                                     <th className="p-3 text-right">Amount</th>
                                     <th className="p-3 text-right">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {donations.map(d => (
-                                    <tr key={d.id} className="hover:bg-gray-50">
-                                        <td className="p-3 text-gray-500 text-xs">
+                                    <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td className="p-3 text-gray-500 dark:text-gray-400 text-xs">
                                             {d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString() : 'Just now'}
                                         </td>
-                                        <td className="p-3 font-medium text-gray-900">{d.name}</td>
-                                        <td className="p-3 text-right font-bold text-green-600">₹{d.amount}</td>
+                                        <td className="p-3 font-medium text-gray-900 dark:text-white">{d.name}</td>
+                                        <td className="p-3 text-right font-bold text-green-600 dark:text-green-400">₹{d.amount}</td>
                                         <td className="p-3 text-right">
                                             <Badge color="green">Received</Badge>
                                         </td>
@@ -798,7 +853,7 @@
                                 ))}
                             </tbody>
                         </table>
-                        {donations.length === 0 && <p className="text-center py-8 text-gray-500">No donations recorded yet.</p>}
+                        {donations.length === 0 && <p className="text-center py-8 text-gray-500 dark:text-gray-400">No donations recorded yet.</p>}
                     </div>
                 </Card>
             )
@@ -821,13 +876,13 @@
             return (
                 <Card className="p-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                            <Activity size={20} className="text-indigo-600" /> Request Monitor
+                        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Activity size={20} className="text-indigo-600 dark:text-indigo-400" /> Request Monitor
                         </h3>
                         <select 
                             value={filter} 
                             onChange={(e) => setFilter(e.target.value)}
-                            className="p-2 border rounded-lg text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
+                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
                         >
                             <option value="all">All Status</option>
                             <option value="payment_review">Payment Review</option>
@@ -843,7 +898,7 @@
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b text-gray-500 bg-gray-50/50">
+                                <tr className="border-b text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-700/50">
                                     <th className="p-3 font-medium whitespace-nowrap">Date</th>
                                     <th className="p-3 font-medium whitespace-nowrap">User</th>
                                     <th className="p-3 font-medium whitespace-nowrap">Organization</th>
@@ -852,20 +907,20 @@
                                     <th className="p-3 font-medium text-right whitespace-nowrap">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {filtered.map(r => (
-                                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="p-3 text-gray-500 text-xs whitespace-nowrap">
+                                    <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <td className="p-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                                             {r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : 'N/A'}
                                             <div className="text-[10px] opacity-75">{r.createdAt?.toDate ? r.createdAt.toDate().toLocaleTimeString() : ''}</div>
                                         </td>
                                         <td className="p-3 whitespace-nowrap">
-                                            <div className="font-medium text-gray-900">{r.userName || 'User'}</div>
-                                            <div className="text-xs text-gray-500">{r.userEmail}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{r.userName || 'User'}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</div>
                                         </td>
-                                        <td className="p-3 text-gray-600 whitespace-nowrap">{r.orgName}</td>
-                                        <td className="p-3 font-medium text-indigo-600 whitespace-nowrap">{r.serviceName}</td>
-                                        <td className="p-3 text-right text-gray-600 whitespace-nowrap">{r.servicePrice ? `₹${r.servicePrice}` : '-'}</td>
+                                        <td className="p-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{r.orgName}</td>
+                                        <td className="p-3 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{r.serviceName}</td>
+                                        <td className="p-3 text-right text-gray-600 dark:text-gray-300 whitespace-nowrap">{r.servicePrice ? `₹${r.servicePrice}` : '-'}</td>
                                         <td className="p-3 text-right whitespace-nowrap">
                                             <Badge color={
                                                 r.status === 'completed' ? 'green' : 
@@ -882,7 +937,7 @@
                             </tbody>
                         </table>
                         {filtered.length === 0 && (
-                            <div className="text-center py-8 text-gray-500">No requests found.</div>
+                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No requests found.</div>
                         )}
                     </div>
                 </Card>
@@ -912,7 +967,7 @@
             const deleteUser = async (uid) => { if (confirmingId === uid) { await deleteDoc(doc(db, 'users', uid)); setConfirmingId(null); } else { setConfirmingId(uid); setTimeout(() => setConfirmingId(null), 3000); } };
             
             return (
-                <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y">{users.map(u => {
+                <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500 dark:text-gray-400 dark:border-gray-700"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y dark:divide-gray-700">{users.map(u => {
                     // Logic for Online Status
                     const now = new Date();
                     const lastSeen = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date(0);
@@ -920,33 +975,33 @@
                     const isOnline = diff < 2; // Consider online if seen in last 2 mins
 
                     return (
-                        <tr key={u.id} className={!u.isActive ? "bg-amber-50" : ""}>
+                        <tr key={u.id} className={!u.isActive ? "bg-amber-50 dark:bg-amber-900/10" : "dark:text-gray-300"}>
                             <td className="py-3">
-                                <div className="font-medium">{u.displayName}</div>
-                                <div className="text-xs text-gray-500">{u.email}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{u.displayName}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{u.email}</div>
                             </td>
                             <td className="capitalize"><Badge color={u.role==='admin'?'purple':u.role==='organization'?'blue':'gray'}>{u.role}</Badge></td>
                             
                             {/* NEW: Online Status Column */}
                             <td>
                                 {isOnline ? (
-                                    <span className="flex items-center gap-1.5 text-green-700 font-medium text-xs bg-green-50 px-2 py-1 rounded-full w-fit">
+                                    <span className="flex items-center gap-1.5 text-green-700 dark:text-green-400 font-medium text-xs bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full w-fit">
                                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
                                     </span>
                                 ) : (
-                                    <span className="flex items-center gap-1.5 text-gray-500 text-xs px-2 py-1">
-                                        <span className="w-2 h-2 rounded-full bg-gray-300"></span> Offline
+                                    <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs px-2 py-1">
+                                        <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600"></span> Offline
                                     </span>
                                 )}
                             </td>
 
                             {/* NEW: Last Seen Column */}
-                            <td className="text-xs text-gray-500">
+                            <td className="text-xs text-gray-500 dark:text-gray-400">
                                 {u.lastSeen?.toDate ? u.lastSeen.toDate().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Never'}
                             </td>
 
-                            <td>{u.isActive?<span className="text-green-600 flex items-center gap-1"><CheckCircle size={14}/> Active</span>:<span className="text-amber-600 flex items-center gap-1"><Clock size={14}/> Pending</span>}</td>
-                            <td className="text-right space-x-2">{!SUPER_ADMINS.includes(u.email) && <><button onClick={()=>toggleStatus(u.id, u.isActive)} className={!u.isActive ? "text-green-600 hover:bg-green-100 p-1 rounded" : "text-gray-400"} title={u.isActive ? "Deactivate" : "Approve"}>{u.isActive ? <XCircle size={16}/> : <CheckCircle size={16}/>}</button><button onClick={()=>deleteUser(u.id)} className={confirmingId === u.id ? "text-red-600 font-bold" : "text-gray-400 hover:text-red-600"}>{confirmingId === u.id ? "Sure?" : <Trash2 size={16}/>}</button></>}</td>
+                            <td>{u.isActive?<span className="text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle size={14}/> Active</span>:<span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Clock size={14}/> Pending</span>}</td>
+                            <td className="text-right space-x-2">{!SUPER_ADMINS.includes(u.email) && <><button onClick={()=>toggleStatus(u.id, u.isActive)} className={!u.isActive ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 p-1 rounded" : "text-gray-400 dark:text-gray-500"} title={u.isActive ? "Deactivate" : "Approve"}>{u.isActive ? <XCircle size={16}/> : <CheckCircle size={16}/>}</button><button onClick={()=>deleteUser(u.id)} className={confirmingId === u.id ? "text-red-600 font-bold" : "text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400"}>{confirmingId === u.id ? "Sure?" : <Trash2 size={16}/>}</button></>}</td>
                         </tr>
                     );
                 })}</tbody></table></div></Card>
@@ -977,7 +1032,7 @@
                 } catch(err) { setMsg({type:'error', text:err.message}); }
             };
             return (
-                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2"><label className="flex items-center gap-2"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border rounded" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border rounded" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border rounded" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
+                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300':'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2 text-gray-700 dark:text-gray-300"><label className="flex items-center gap-2"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
             );
         }
 
@@ -989,7 +1044,7 @@
             const post = async (e) => { e.preventDefault(); try { await addDoc(collection(db, 'news'), {...news, createdAt: serverTimestamp()}); setNews({title:'', content:''}); } catch (e) { console.error(e); } };
             const deleteNews = async (id) => { if (confirmId === id) { await deleteDoc(doc(db, 'news', id)); setConfirmId(null); } else { setConfirmId(id); setTimeout(() => setConfirmId(null), 3000); } };
             return (
-                <div className="space-y-8"><Card className="p-6"><h3 className="font-bold mb-4">Post News</h3><form onSubmit={post} className="space-y-4"><input className="w-full p-2 border rounded" placeholder="Title" value={news.title} onChange={e=>setNews({...news, title:e.target.value})} required /><textarea className="w-full p-2 border rounded" rows={3} placeholder="Content" value={news.content} onChange={e=>setNews({...news, content:e.target.value})} required /><Button type="submit">Publish</Button></form></Card><Card className="p-6"><h3 className="font-bold mb-4">Manage Updates</h3><div className="space-y-4">{newsList.map(item => (<div key={item.id} className="p-4 border rounded bg-gray-50 flex justify-between items-start group"><div><h4 className="font-bold text-gray-900">{item.title}</h4><p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{item.content}</p><div className="text-xs text-gray-400 mt-2">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</div></div><button onClick={() => deleteNews(item.id)} className={`p-2 rounded transition-colors ${confirmId === item.id ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'}`} title="Delete">{confirmId === item.id ? <span className="text-xs font-bold">Sure?</span> : <Trash2 size={18} />}</button></div>))}{newsList.length === 0 && <p className="text-gray-500 text-sm">No updates posted.</p>}</div></Card></div>
+                <div className="space-y-8"><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Post News</h3><form onSubmit={post} className="space-y-4"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Title" value={news.title} onChange={e=>setNews({...news, title:e.target.value})} required /><textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Content" value={news.content} onChange={e=>setNews({...news, content:e.target.value})} required /><Button type="submit">Publish</Button></form></Card><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Manage Updates</h3><div className="space-y-4">{newsList.map(item => (<div key={item.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50 flex justify-between items-start group"><div><h4 className="font-bold text-gray-900 dark:text-white">{item.title}</h4><p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{item.content}</p><div className="text-xs text-gray-400 mt-2">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</div></div><button onClick={() => deleteNews(item.id)} className={`p-2 rounded transition-colors ${confirmId === item.id ? 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Delete">{confirmId === item.id ? <span className="text-xs font-bold">Sure?</span> : <Trash2 size={18} />}</button></div>))}{newsList.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-sm">No updates posted.</p>}</div></Card></div>
             );
         }
 
@@ -1000,7 +1055,7 @@
             const handleClick = (id) => { if (confirmingId === id) { approvePayment(id); } else { setConfirmingId(id); setTimeout(() => setConfirmingId(null), 3000); } };
             const approvePayment = async (id) => { try { await updateDoc(doc(db, 'requests', id), { status: 'pending' }); setConfirmingId(null); } catch (e) { console.error(e); } };
             return (
-                <Card className="p-6"><h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2"><IndianRupee size={20} className="text-indigo-600" /> Payment Approvals</h3><div className="space-y-3">{requests.map(req => (<div key={req.id} className="p-4 border border-indigo-100 rounded-lg bg-indigo-50/50 flex flex-col md:flex-row justify-between items-center gap-4"><div><div className="font-bold text-gray-900">{req.serviceName} <span className="text-gray-500 font-normal">(₹{req.servicePrice || 'N/A'})</span></div><div className="text-sm text-gray-600">User: {req.userEmail}</div><div className="text-xs text-gray-400 mt-1">To: {req.orgName}</div></div><Button onClick={() => handleClick(req.id)} variant={confirmingId === req.id ? 'danger' : 'success'} className="!py-1.5 !px-4 !text-sm transition-all">{confirmingId === req.id ? 'Confirm Approval?' : <><Check size={16} /> Approve Payment</>}</Button></div>))}{requests.length === 0 && <p className="text-gray-500 text-center py-4">No pending payments.</p>}</div></Card>
+                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><IndianRupee size={20} className="text-indigo-600 dark:text-indigo-400" /> Payment Approvals</h3><div className="space-y-3">{requests.map(req => (<div key={req.id} className="p-4 border border-indigo-100 dark:border-indigo-900 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/20 flex flex-col md:flex-row justify-between items-center gap-4"><div><div className="font-bold text-gray-900 dark:text-white">{req.serviceName} <span className="text-gray-500 dark:text-gray-400 font-normal">(₹{req.servicePrice || 'N/A'})</span></div><div className="text-sm text-gray-600 dark:text-gray-300">User: {req.userEmail}</div><div className="text-xs text-gray-400 mt-1">To: {req.orgName}</div></div><Button onClick={() => handleClick(req.id)} variant={confirmingId === req.id ? 'danger' : 'success'} className="!py-1.5 !px-4 !text-sm transition-all">{confirmingId === req.id ? 'Confirm Approval?' : <><Check size={16} /> Approve Payment</>}</Button></div>))}{requests.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-center py-4">No pending payments.</p>}</div></Card>
             );
         }
 
@@ -1021,19 +1076,19 @@
             };
 
             return (
-                <Card className="p-6"><h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2"><AlertTriangle size={20} className="text-amber-600" /> Grievance Portal</h3><div className="space-y-4">{grievances.map(g => (
-                    <div key={g.id} className="p-4 border border-gray-200 rounded-lg">
+                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><AlertTriangle size={20} className="text-amber-600 dark:text-amber-500" /> Grievance Portal</h3><div className="space-y-4">{grievances.map(g => (
+                    <div key={g.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-700/30">
                         <div className="flex justify-between items-start">
                             <div>
-                                <div className="font-bold text-lg">{g.subject} <Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
-                                <div className="text-sm text-gray-500 mt-1">From: {g.userEmail} ({g.userRole})</div>
-                                <p className="mt-2 text-gray-700">{g.description}</p>
+                                <div className="font-bold text-lg text-gray-900 dark:text-white">{g.subject} <Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">From: {g.userEmail} ({g.userRole})</div>
+                                <p className="mt-2 text-gray-700 dark:text-gray-300">{g.description}</p>
                             </div>
                             {g.status !== 'resolved' && <Button variant="secondary" onClick={() => resolveGrievance(g.id)} className="!py-1 !text-sm">Mark Resolved</Button>}
                         </div>
                     </div>
                 ))}
-                {grievances.length === 0 && <div className="text-center text-gray-500">No grievances found.</div>}</div></Card>
+                {grievances.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400">No grievances found.</div>}</div></Card>
             );
         }
 
@@ -1050,7 +1105,7 @@
                 return () => unsub();
             }, []);
             return (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]"><Card className="col-span-1 flex flex-col h-full"><div className="p-4 border-b"><h3 className="font-bold text-gray-900">Conversations</h3></div><div className="overflow-y-auto flex-1 p-2 space-y-2">{chats.map(chat => (<div key={chat.id} onClick={() => setSelectedChat(chat)} className={`p-3 rounded-lg cursor-pointer border transition-all ${selectedChat?.id === chat.id ? 'bg-indigo-50 border-indigo-200' : 'hover:bg-gray-50 border-transparent'}`}><div className="text-xs font-bold text-gray-700 truncate">{Object.values(chat.participantData || {}).map(p => p.name).join(' & ')}</div><div className="text-xs text-gray-500 truncate mt-1">{chat.lastMessage || 'No messages'}</div><div className="text-[10px] text-gray-400 mt-1 text-right">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</div></div>))}{chats.length === 0 && <div className="p-4 text-center text-gray-500 text-sm">No chats found</div>}</div></Card><Card className="col-span-1 lg:col-span-2 flex flex-col h-full overflow-hidden">{selectedChat ? (<AdminChatDetails chat={selectedChat} />) : (<div className="h-full flex items-center justify-center text-gray-400 bg-gray-50/50">Select a conversation to monitor</div>)}</Card></div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]"><Card className="col-span-1 flex flex-col h-full"><div className="p-4 border-b border-gray-200 dark:border-gray-700"><h3 className="font-bold text-gray-900 dark:text-white">Conversations</h3></div><div className="overflow-y-auto flex-1 p-2 space-y-2">{chats.map(chat => (<div key={chat.id} onClick={() => setSelectedChat(chat)} className={`p-3 rounded-lg cursor-pointer border transition-all ${selectedChat?.id === chat.id ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'}`}><div className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{Object.values(chat.participantData || {}).map(p => p.name).join(' & ')}</div><div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{chat.lastMessage || 'No messages'}</div><div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 text-right">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</div></div>))}{chats.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">No chats found</div>}</div></Card><Card className="col-span-1 lg:col-span-2 flex flex-col h-full overflow-hidden">{selectedChat ? (<AdminChatDetails chat={selectedChat} />) : (<div className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-700/20">Select a conversation to monitor</div>)}</Card></div>
             );
         }
 
@@ -1066,7 +1121,7 @@
                 return () => unsub();
             }, [chat.id]);
             return (
-                <div className="flex flex-col h-full"><div className="p-4 border-b bg-gray-50"><h4 className="font-bold text-gray-800 text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600">{senderName}</span><span className="text-[10px] text-gray-400">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 p-3 rounded-lg rounded-tl-none text-sm text-gray-800">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
+                <div className="flex flex-col h-full"><div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"><h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-gray-800">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{senderName}</span><span className="text-[10px] text-gray-400 dark:text-gray-500">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-sm text-gray-800 dark:text-gray-200">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
             );
         }
 
@@ -1149,29 +1204,29 @@
 
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
+                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
                     <div className="lg:col-span-3">
                         {tab === 'profile' && (
                             <div className="space-y-6">
                                 <Card className="p-6">
-                                    <div className="flex justify-between mb-6"><h2 className="text-xl font-bold">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
-                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1">About</label>{isEditing ? <textarea className="w-full p-2 border rounded" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 p-3 rounded text-gray-700">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 rounded border"><input className="w-full p-2 border rounded text-sm" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border rounded text-sm" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border rounded text-sm" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
+                                    <div className="flex justify-between mb-6"><h2 className="text-xl font-bold text-gray-900 dark:text-white">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
+                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">About</label>{isEditing ? <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded text-gray-700 dark:text-gray-300">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
                                 </Card>
                                 <Card className="p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Settings size={20} /> Account Settings</h3>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Settings size={20} /> Account Settings</h3>
                                     <form onSubmit={handleUpdateOrgInfo} className="space-y-4 max-w-md">
-                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`}>{profileMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium">Organization Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                                        <div><label className="block text-sm font-medium">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300':'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{profileMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Organization Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
                                         <Button type="submit">Update Info</Button>
                                     </form>
                                 </Card>
                                 <Card className="p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3>
                                     <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
-                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{passMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
+                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{passMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
                                         <Button type="submit">Update Password</Button>
                                     </form>
                                 </Card>
@@ -1179,14 +1234,14 @@
                         )}
                         {tab === 'requests' && (
                             <Card className="p-6">
-                                <h3 className="font-bold mb-4">Requests</h3>
+                                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Requests</h3>
                                 <div className="space-y-3">
                                     {requests.map(r => (
-                                        <div key={r.id} className="p-4 border rounded bg-white flex justify-between items-center">
+                                        <div key={r.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700/30 flex justify-between items-center">
                                             <div>
-                                                <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
+                                                <div className="font-bold text-gray-900 dark:text-white">{r.serviceName} {r.servicePrice && <span className="text-gray-500 dark:text-gray-400 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
                                                 {/* HIDE EMAIL: Display Name instead */}
-                                                <div className="text-sm text-gray-500">{r.userName || "User"}</div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">{r.userName || "User"}</div>
                                                 <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
                                             </div>
                                             {r.status === 'pending' && (
@@ -1197,17 +1252,17 @@
                                             )}
                                             {['accepted', 'in_progress', 'completed'].includes(r.status) && (
                                                 <div className="mt-2 md:mt-0">
-                                                    <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                                                    <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                                                         <option value="accepted">Not Started</option>
                                                         <option value="in_progress">In Progress</option>
                                                         <option value="completed">Completed</option>
                                                     </select>
                                                 </div>
                                             )}
-                                            {r.status === 'cancelled' && <span className="text-sm text-gray-500 italic">Cancelled by User</span>}
+                                            {r.status === 'cancelled' && <span className="text-sm text-gray-500 dark:text-gray-400 italic">Cancelled by User</span>}
                                         </div>
                                     ))}
-                                    {requests.length===0 && <p className="text-gray-500">No requests.</p>}
+                                    {requests.length===0 && <p className="text-gray-500 dark:text-gray-400">No requests.</p>}
                                 </div>
                             </Card>
                         )}
@@ -1242,7 +1297,7 @@
                 return pData?.name || "User"; 
             };
             
-            return (<Card className="p-6"><h3 className="font-bold mb-4">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 text-center py-4">No active conversations.</p>}</div></Card>);
+            return (<Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900 dark:text-white">{getPartnerName(chat)}</span><span className="text-xs text-gray-400 dark:text-gray-500">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">No active conversations.</p>}</div></Card>);
         }
 
         // --- USER DASHBOARD ---
@@ -1292,22 +1347,22 @@
 
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
+                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
                     <div className="lg:col-span-3">
-                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900">{org.displayName}</h3><p className="text-gray-500 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
-                        {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
-                            <div key={r.id} className="p-3 bg-gray-50 rounded border text-sm flex justify-between items-center">
+                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{org.displayName}</h3><p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700/50 hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:text-white text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
+                        {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
+                            <div key={r.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded text-sm flex justify-between items-center">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-indigo-900">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
+                                        <span className="font-bold text-indigo-900 dark:text-indigo-200">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
                                         <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status === 'payment_review' ? 'Payment Review' : r.status}</Badge>
                                     </div>
-                                    <div className="text-gray-600 text-xs">{r.orgName}</div>
+                                    <div className="text-gray-600 dark:text-gray-400 text-xs">{r.orgName}</div>
                                 </div>
                                 {['pending', 'payment_review'].includes(r.status) && (
                                     <button 
                                         onClick={() => cancelRequest(r.id)} 
-                                        className={`text-xs underline ${confirmingCancelId === r.id ? 'text-red-700 font-bold' : 'text-red-500 hover:text-red-700'}`}
+                                        className={`text-xs underline ${confirmingCancelId === r.id ? 'text-red-700 dark:text-red-400 font-bold' : 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300'}`}
                                     >
                                         {confirmingCancelId === r.id ? "Confirm Cancel?" : "Cancel Request"}
                                     </button>
@@ -1318,7 +1373,7 @@
                         {tab === 'grievances' && <CommonGrievanceList user={user} role="user" />}
                     </div>
                     {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
-                    {paymentModalData && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full"><h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Payment</h3><p className="text-gray-600 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
+                    {paymentModalData && (<div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"><div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border dark:border-gray-700"><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Payment</h3><p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600 dark:text-indigo-400">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 dark:text-gray-400 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 dark:text-gray-200 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 dark:text-indigo-400 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
                 </div>
             );
         }
@@ -1369,16 +1424,16 @@
             return (
                 <div className="space-y-6">
                     <Card className="p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600" /> Account Details</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600 dark:text-indigo-400" /> Account Details</h3>
                         <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
-                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
-                            <div><label className="block text-sm font-medium text-gray-500">Full Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
+                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{infoMsg.text}</div>}
+                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
                             <Button type="submit">Update Info</Button>
                         </form>
                     </Card>
-                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
+                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
                 </div>
             );
         }

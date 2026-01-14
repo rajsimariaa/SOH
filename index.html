@@ -74,7 +74,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Activity // Added Activity icon
+            BookOpen, Users, Activity, Gift // Added Gift icon
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -205,6 +205,72 @@
                         <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
                             <Button onClick={onClose}>Close</Button>
                         </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- DONATION MODAL ---
+        function DonationModal({ onClose }) {
+            const [name, setName] = useState('');
+            const [amount, setAmount] = useState('');
+            const [step, setStep] = useState(1); // 1: Details, 2: UPI/Confirm
+
+            const handleNext = (e) => {
+                e.preventDefault();
+                if(name && amount) setStep(2);
+            }
+
+            const handleDone = async () => {
+                try {
+                    await addDoc(collection(db, 'donations'), {
+                        name,
+                        amount,
+                        createdAt: serverTimestamp(),
+                        status: 'user_confirmed'
+                    });
+                    alert("Thank you for your donation!");
+                    onClose();
+                } catch(e) {
+                    console.error(e);
+                    alert("Error recording donation.");
+                }
+            }
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <Heart className="text-rose-600 fill-rose-600" size={24}/> Make a Donation
+                            </h3>
+                            <button onClick={onClose}><X size={20} /></button>
+                        </div>
+                        
+                        {step === 1 ? (
+                            <form onSubmit={handleNext} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                                    <input className="w-full p-2 border rounded" value={name} onChange={e=>setName(e.target.value)} required placeholder="Enter your name" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                                    <input type="number" className="w-full p-2 border rounded" value={amount} onChange={e=>setAmount(e.target.value)} required placeholder="Enter amount" />
+                                </div>
+                                <Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 focus:ring-rose-500 shadow-rose-200">Proceed to Pay</Button>
+                            </form>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="bg-indigo-50 p-4 rounded-lg text-center border border-indigo-100">
+                                    <p className="text-sm text-gray-600 mb-2">Scan QR or use UPI ID</p>
+                                    <div className="font-mono font-bold text-xl text-indigo-700 select-all p-2 bg-white rounded border border-indigo-200">{UPI_ID}</div>
+                                    <p className="text-xs text-gray-500 mt-2">Paying: <span className="font-bold text-gray-900">₹{amount}</span></p>
+                                </div>
+                                <p className="text-xs text-center text-gray-500">Click below once you have completed the transaction in your UPI app.</p>
+                                <Button onClick={handleDone} variant="success" className="w-full">Payment Done</Button>
+                                <Button onClick={()=>setStep(1)} variant="ghost" className="w-full text-xs">Back</Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -490,6 +556,8 @@
         // --- DASHBOARDS & PAGES ---
         function Home({ user, onNavigate }) {
             const [news, setNews] = useState([]);
+            const [showDonate, setShowDonate] = useState(false);
+
             useEffect(() => {
                 const unsubscribe = onSnapshot(query(collection(db, 'news'), orderBy('createdAt', 'desc')), 
                     (snapshot) => setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))), 
@@ -499,11 +567,25 @@
             }, []);
 
             return (
-                <div className="space-y-12">
+                <div className="space-y-12 relative">
+                    {showDonate && <DonationModal onClose={() => setShowDonate(false)} />}
                     <section className="text-center space-y-6 py-12">
                         <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 tracking-tight">Empowering the <span className="text-indigo-600">Queer Community</span></h1>
                         <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-600">Connecting you with inclusive services, supportive organizations, and a community that cares.</p>
-                        {!user && <div className="flex justify-center gap-4"><Button onClick={() => onNavigate('signup')} className="!text-lg !px-8 !py-3">Get Started</Button><Button variant="secondary" onClick={() => onNavigate('login')} className="!text-lg !px-8 !py-3">Sign In</Button></div>}
+                        <div className="flex justify-center gap-4 flex-wrap">
+                            {!user && (
+                                <>
+                                    <Button onClick={() => onNavigate('signup')} className="!text-lg !px-8 !py-3">Get Started</Button>
+                                    <Button variant="secondary" onClick={() => onNavigate('login')} className="!text-lg !px-8 !py-3">Sign In</Button>
+                                </>
+                            )}
+                            <button 
+                                onClick={() => setShowDonate(true)}
+                                className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-200 transition-all"
+                            >
+                                <Heart className="fill-white" size={20} /> Donate
+                            </button>
+                        </div>
                     </section>
                     
                     {/* Mission & Vision */}
@@ -657,6 +739,7 @@
                             <SidebarBtn icon={User} label="Manage Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
                             <SidebarBtn icon={Plus} label="Create Account" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
                             <SidebarBtn icon={Activity} label="Request Monitor" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
+                            <SidebarBtn icon={Gift} label="Donations" active={activeTab === 'donations'} onClick={() => setActiveTab('donations')} />
                             <SidebarBtn icon={Newspaper} label="Manage News" active={activeTab === 'news'} onClick={() => setActiveTab('news')} />
                             <SidebarBtn icon={IndianRupee} label="Payment Approvals" active={activeTab === 'approvals'} onClick={() => setActiveTab('approvals')} />
                             <SidebarBtn icon={AlertTriangle} label="Grievance Portal" active={activeTab === 'grievances'} onClick={() => setActiveTab('grievances')} />
@@ -667,6 +750,7 @@
                         {activeTab === 'users' && <AdminUserList />} 
                         {activeTab === 'create' && <AdminCreateUser />} 
                         {activeTab === 'requests' && <AdminRequestMonitor />}
+                        {activeTab === 'donations' && <AdminDonations />}
                         {activeTab === 'news' && <AdminNewsManager />} 
                         {activeTab === 'approvals' && <AdminPaymentApprovals />} 
                         {activeTab === 'grievances' && <AdminGrievances />} 
@@ -674,6 +758,50 @@
                     </div>
                 </div>
             );
+        }
+
+        function AdminDonations() {
+            const [donations, setDonations] = useState([]);
+            useEffect(() => {
+                const q = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
+                const unsub = onSnapshot(q, s => setDonations(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                return () => unsub();
+            }, []);
+
+            return (
+                <Card className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Gift size={20} className="text-rose-600" /> Donations Received
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b text-gray-500 bg-gray-50/50">
+                                    <th className="p-3">Date</th>
+                                    <th className="p-3">Donor Name</th>
+                                    <th className="p-3 text-right">Amount</th>
+                                    <th className="p-3 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {donations.map(d => (
+                                    <tr key={d.id} className="hover:bg-gray-50">
+                                        <td className="p-3 text-gray-500 text-xs">
+                                            {d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString() : 'Just now'}
+                                        </td>
+                                        <td className="p-3 font-medium text-gray-900">{d.name}</td>
+                                        <td className="p-3 text-right font-bold text-green-600">₹{d.amount}</td>
+                                        <td className="p-3 text-right">
+                                            <Badge color="green">Received</Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {donations.length === 0 && <p className="text-center py-8 text-gray-500">No donations recorded yet.</p>}
+                    </div>
+                </Card>
+            )
         }
 
         function AdminRequestMonitor() {

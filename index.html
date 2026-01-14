@@ -74,7 +74,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users // Added icons for services
+            BookOpen, Users, Activity // Added Activity icon
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -656,6 +656,7 @@
                         <Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Admin Controls</h3><div className="space-y-1">
                             <SidebarBtn icon={User} label="Manage Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
                             <SidebarBtn icon={Plus} label="Create Account" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
+                            <SidebarBtn icon={Activity} label="Request Monitor" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
                             <SidebarBtn icon={Newspaper} label="Manage News" active={activeTab === 'news'} onClick={() => setActiveTab('news')} />
                             <SidebarBtn icon={IndianRupee} label="Payment Approvals" active={activeTab === 'approvals'} onClick={() => setActiveTab('approvals')} />
                             <SidebarBtn icon={AlertTriangle} label="Grievance Portal" active={activeTab === 'grievances'} onClick={() => setActiveTab('grievances')} />
@@ -663,9 +664,100 @@
                         </div></Card>
                     </div>
                     <div className="lg:col-span-3">
-                        {activeTab === 'users' && <AdminUserList />} {activeTab === 'create' && <AdminCreateUser />} {activeTab === 'news' && <AdminNewsManager />} {activeTab === 'approvals' && <AdminPaymentApprovals />} {activeTab === 'grievances' && <AdminGrievances />} {activeTab === 'messages' && <AdminMessageCenter />}
+                        {activeTab === 'users' && <AdminUserList />} 
+                        {activeTab === 'create' && <AdminCreateUser />} 
+                        {activeTab === 'requests' && <AdminRequestMonitor />}
+                        {activeTab === 'news' && <AdminNewsManager />} 
+                        {activeTab === 'approvals' && <AdminPaymentApprovals />} 
+                        {activeTab === 'grievances' && <AdminGrievances />} 
+                        {activeTab === 'messages' && <AdminMessageCenter />}
                     </div>
                 </div>
+            );
+        }
+
+        function AdminRequestMonitor() {
+            const [requests, setRequests] = useState([]);
+            const [filter, setFilter] = useState('all');
+
+            useEffect(() => {
+                const q = query(collection(db, 'requests'), orderBy('createdAt', 'desc'));
+                const unsub = onSnapshot(q, (snapshot) => {
+                    setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                });
+                return () => unsub();
+            }, []);
+
+            const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+
+            return (
+                <Card className="p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <Activity size={20} className="text-indigo-600" /> Request Monitor
+                        </h3>
+                        <select 
+                            value={filter} 
+                            onChange={(e) => setFilter(e.target.value)}
+                            className="p-2 border rounded-lg text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="payment_review">Payment Review</option>
+                            <option value="pending">Pending</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="declined">Declined</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b text-gray-500 bg-gray-50/50">
+                                    <th className="p-3 font-medium whitespace-nowrap">Date</th>
+                                    <th className="p-3 font-medium whitespace-nowrap">User</th>
+                                    <th className="p-3 font-medium whitespace-nowrap">Organization</th>
+                                    <th className="p-3 font-medium whitespace-nowrap">Service</th>
+                                    <th className="p-3 font-medium text-right whitespace-nowrap">Price</th>
+                                    <th className="p-3 font-medium text-right whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filtered.map(r => (
+                                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="p-3 text-gray-500 text-xs whitespace-nowrap">
+                                            {r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : 'N/A'}
+                                            <div className="text-[10px] opacity-75">{r.createdAt?.toDate ? r.createdAt.toDate().toLocaleTimeString() : ''}</div>
+                                        </td>
+                                        <td className="p-3 whitespace-nowrap">
+                                            <div className="font-medium text-gray-900">{r.userName || 'User'}</div>
+                                            <div className="text-xs text-gray-500">{r.userEmail}</div>
+                                        </td>
+                                        <td className="p-3 text-gray-600 whitespace-nowrap">{r.orgName}</td>
+                                        <td className="p-3 font-medium text-indigo-600 whitespace-nowrap">{r.serviceName}</td>
+                                        <td className="p-3 text-right text-gray-600 whitespace-nowrap">{r.servicePrice ? `₹${r.servicePrice}` : '-'}</td>
+                                        <td className="p-3 text-right whitespace-nowrap">
+                                            <Badge color={
+                                                r.status === 'completed' ? 'green' : 
+                                                r.status === 'accepted' ? 'blue' : 
+                                                r.status === 'declined' ? 'red' :
+                                                r.status === 'cancelled' ? 'gray' : 
+                                                'yellow'
+                                            }>
+                                                {r.status === 'payment_review' ? 'Payment' : r.status}
+                                            </Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {filtered.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">No requests found.</div>
+                        )}
+                    </div>
+                </Card>
             );
         }
 

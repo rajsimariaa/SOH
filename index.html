@@ -96,7 +96,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Activity, Gift, Sun, Moon, Mail
+            BookOpen, Users, Activity, Gift, Sun, Moon, Mail, ShoppingBag, Tag
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -339,6 +339,7 @@
                             </div>
                             <div className="hidden md:flex items-center space-x-4">
                                 <NavLink target="home" label="Home" icon={Newspaper} />
+                                <NavLink target="store" label="Store" icon={ShoppingBag} />
                                 {!user ? (
                                     <>
                                         <Button variant="ghost" onClick={() => onNavigate('login')}>Sign In</Button>
@@ -374,6 +375,7 @@
                     {isOpen && (
                         <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 pt-2 pb-3 space-y-1">
                             <NavLink target="home" label="Home" icon={Newspaper} />
+                            <NavLink target="store" label="Store" icon={ShoppingBag} />
                             {user && role && <NavLink target="dashboard" label="Dashboard" icon={Briefcase} />}
                             {!user ? (
                                 <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700">
@@ -445,6 +447,7 @@
                                     setUserData(data);
                                     setUserRole(data.role);
                                     // CHECK VERIFICATION FOR REGULAR USERS ONLY
+                                    // Admins, Orgs, AND SELLERS are exempt from email verification check for login
                                     if (data.role === 'user' && !user.emailVerified) {
                                         setVerificationRequired(true);
                                     } else {
@@ -509,11 +512,13 @@
                     <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} theme={theme} toggleTheme={toggleTheme} />
                     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
+                        {view === 'store' && <Store user={currentUser} />}
                         {view === 'login' && <Login onNavigate={setView} />}
                         {view === 'signup' && <Signup onNavigate={setView} />}
                         {view === 'dashboard' && userRole === 'admin' && <AdminDashboard user={currentUser} />}
                         {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
                         {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}
+                        {view === 'dashboard' && userRole === 'seller' && <SellerDashboard user={currentUser} userData={userData} />}
                     </main>
                 </div>
             );
@@ -554,7 +559,6 @@
                         </div>
                     </section>
                     
-                    {/* Mission & Vision */}
                     <div className="grid md:grid-cols-2 gap-8">
                         <Card className="p-8 bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-750 border-indigo-100 dark:border-gray-700">
                             <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-300"><Heart size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Mission</h2></div>
@@ -566,7 +570,6 @@
                         </Card>
                     </div>
 
-                    {/* Services Section */}
                     <section className="py-8">
                         <div className="text-center mb-8">
                           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Our Services</h2>
@@ -601,6 +604,166 @@
                             )) : <div className="col-span-full text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400">No news updates yet. Stay tuned!</div>}
                         </div>
                     </section>
+                </div>
+            );
+        }
+
+        function Store({ user }) {
+            const [products, setProducts] = useState([]);
+            
+            useEffect(() => {
+                const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+                const unsub = onSnapshot(q, (s) => setProducts(s.docs.map(d => ({id:d.id, ...d.data()}))), (e) => console.log("Store load err", e));
+                return () => unsub();
+            }, []);
+
+            const handleBuy = async (product) => {
+                if(!user) { alert("Please login to buy products."); return; }
+                if(!confirm(`Confirm order for ${product.name} (₹${product.price})?`)) return;
+                
+                try {
+                    await addDoc(collection(db, 'orders'), {
+                        productId: product.id,
+                        productName: product.name,
+                        price: product.price,
+                        sellerId: product.sellerId,
+                        buyerId: user.uid,
+                        buyerEmail: user.email,
+                        status: 'pending',
+                        createdAt: serverTimestamp()
+                    });
+                    alert("Order placed successfully!");
+                } catch(e) {
+                    console.error(e);
+                    alert("Failed to place order.");
+                }
+            };
+
+            return (
+                <div className="space-y-8">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Community Store</h2>
+                        <p className="text-gray-600 dark:text-gray-400">Support local creators and small businesses.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {products.map(p => (
+                            <Card key={p.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
+                                <div className="aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+                                    {/* Placeholder for Product Image */}
+                                    <ShoppingBag size={48} opacity={0.2} />
+                                </div>
+                                <div className="p-4 flex flex-col flex-grow">
+                                    <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{p.name}</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex-grow">{p.description}</p>
+                                    <div className="flex justify-between items-center mt-auto">
+                                        <span className="font-bold text-indigo-600 dark:text-indigo-400">₹{p.price}</span>
+                                        <Button onClick={() => handleBuy(p)} className="!py-1 !px-3 !text-sm">Buy Now</Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                    {products.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-12">No products available yet.</p>}
+                </div>
+            );
+        }
+
+        function SellerDashboard({ user }) {
+            const [products, setProducts] = useState([]);
+            const [orders, setOrders] = useState([]);
+            const [newProd, setNewProd] = useState({ name: '', price: '', description: '' });
+
+            useEffect(() => {
+                // Fetch My Products
+                const qP = query(collection(db, 'products'), where('sellerId', '==', user.uid));
+                const unsubP = onSnapshot(qP, s => setProducts(s.docs.map(d => ({id:d.id, ...d.data()}))), (e) => console.log("Seller P err", e));
+                
+                // Fetch Orders for My Products
+                const qO = query(collection(db, 'orders'), where('sellerId', '==', user.uid));
+                const unsubO = onSnapshot(qO, s => setOrders(s.docs.map(d => ({id:d.id, ...d.data()}))), (e) => console.log("Seller O err", e));
+
+                return () => { unsubP(); unsubO(); };
+            }, [user.uid]);
+
+            const addProduct = async (e) => {
+                e.preventDefault();
+                await addDoc(collection(db, 'products'), {
+                    ...newProd,
+                    price: Number(newProd.price),
+                    sellerId: user.uid,
+                    sellerName: user.displayName || user.email,
+                    createdAt: serverTimestamp()
+                });
+                setNewProd({ name: '', price: '', description: '' });
+            };
+
+            const deleteProduct = async (id) => {
+                if(confirm("Delete this product?")) await deleteDoc(doc(db, 'products', id));
+            };
+
+            const updateOrder = async (id, status) => {
+                await updateDoc(doc(db, 'orders', id), { status });
+            };
+
+            return (
+                <div className="grid lg:grid-cols-3 gap-8">
+                    {/* Add Product Form */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <Card className="p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Add Product</h3>
+                            <form onSubmit={addProduct} className="space-y-4">
+                                <input className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Product Name" value={newProd.name} onChange={e=>setNewProd({...newProd, name:e.target.value})} required />
+                                <input type="number" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Price (₹)" value={newProd.price} onChange={e=>setNewProd({...newProd, price:e.target.value})} required />
+                                <textarea className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" rows={3} placeholder="Description" value={newProd.description} onChange={e=>setNewProd({...newProd, description:e.target.value})} required />
+                                <Button type="submit" className="w-full">List Item</Button>
+                            </form>
+                        </Card>
+                    </div>
+
+                    {/* Product List & Orders */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card className="p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">My Products</h3>
+                            <div className="space-y-3">
+                                {products.map(p => (
+                                    <div key={p.id} className="flex justify-between items-center p-3 border rounded dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                                        <div>
+                                            <div className="font-bold text-gray-900 dark:text-white">{p.name}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">₹{p.price}</div>
+                                        </div>
+                                        <button onClick={()=>deleteProduct(p.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button>
+                                    </div>
+                                ))}
+                                {products.length === 0 && <p className="text-gray-500">No products listed.</p>}
+                            </div>
+                        </Card>
+
+                        <Card className="p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Incoming Orders</h3>
+                            <div className="space-y-3">
+                                {orders.map(o => (
+                                    <div key={o.id} className="p-4 border rounded dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="font-bold text-indigo-600 dark:text-indigo-400">{o.productName}</span>
+                                            <Badge color={o.status === 'completed' ? 'green' : 'yellow'}>{o.status}</Badge>
+                                        </div>
+                                        <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                                            Buyer: {o.buyerEmail}<br/>
+                                            Amount: ₹{o.price}
+                                        </div>
+                                        {o.status === 'pending' && (
+                                            <div className="flex gap-2">
+                                                <Button onClick={()=>updateOrder(o.id, 'completed')} variant="success" className="!py-1 !text-xs">Mark Completed</Button>
+                                                <Button onClick={()=>updateOrder(o.id, 'cancelled')} variant="danger" className="!py-1 !text-xs">Cancel</Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {orders.length === 0 && <p className="text-gray-500">No orders yet.</p>}
+                            </div>
+                        </Card>
+                    </div>
                 </div>
             );
         }
@@ -642,11 +805,7 @@
                 }
                 try { 
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password); 
-                    
-                    // SEND VERIFICATION EMAIL
                     await sendEmailVerification(userCredential.user);
-
-                    // Create User DB Entry 
                     await setDoc(doc(db, 'users', userCredential.user.uid), { 
                         uid: userCredential.user.uid, 
                         email, 
@@ -658,8 +817,6 @@
                         createdAt: serverTimestamp(),
                         lastSeen: serverTimestamp()
                     }); 
-
-                    // Do not navigate to home, the App component will catch the unverified state and show the VerifyEmailPage
                 } catch (err) { 
                     setError(err.message); 
                 } 
@@ -771,7 +928,7 @@
             
             useEffect(() => {
                 const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
-                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))), (e) => console.log(e));
                 return () => unsub();
             }, [user.uid]);
 
@@ -852,7 +1009,7 @@
             const [donations, setDonations] = useState([]);
             useEffect(() => {
                 const q = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
-                const unsub = onSnapshot(q, s => setDonations(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const unsub = onSnapshot(q, s => setDonations(s.docs.map(d => ({id:d.id, ...d.data()}))), e => console.log(e));
                 return () => unsub();
             }, []);
 
@@ -900,7 +1057,7 @@
                 const q = query(collection(db, 'requests'), orderBy('createdAt', 'desc'));
                 const unsub = onSnapshot(q, (snapshot) => {
                     setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                });
+                }, (e) => console.log(e));
                 return () => unsub();
             }, []);
 
@@ -992,7 +1149,7 @@
                         return timeB - timeA;
                     });
                     setUsers(data);
-                }); 
+                }, (e) => console.log(e)); 
                 return () => unsub(); 
             }, []);
 
@@ -1065,7 +1222,27 @@
                 } catch(err) { setMsg({type:'error', text:err.message}); }
             };
             return (
-                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2"><label className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
+                <Card className="p-8 max-w-xl mx-auto">
+                    <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Create Account</h3>
+                    <form onSubmit={handleCreate} className="space-y-4">
+                        {msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}
+                        <div className="flex gap-4 mb-2 flex-wrap">
+                            <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org
+                            </label>
+                            <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <input type="radio" checked={form.role==='seller'} onChange={()=>setForm({...form, role:'seller'})} /> Seller
+                            </label>
+                            <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin
+                            </label>
+                        </div>
+                        <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required />
+                        <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required />
+                        <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required />
+                        <Button type="submit" className="w-full">Create</Button>
+                    </form>
+                </Card>
             );
         }
 
@@ -1073,7 +1250,7 @@
             const [news, setNews] = useState({title:'', content:''});
             const [newsList, setNewsList] = useState([]);
             const [confirmId, setConfirmId] = useState(null);
-            useEffect(() => { const q = query(collection(db, 'news'), orderBy('createdAt', 'desc')); const unsub = onSnapshot(q, (s) => setNewsList(s.docs.map(d => ({ id: d.id, ...d.data() })))); return () => unsub(); }, []);
+            useEffect(() => { const q = query(collection(db, 'news'), orderBy('createdAt', 'desc')); const unsub = onSnapshot(q, (s) => setNewsList(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log(e)); return () => unsub(); }, []);
             const post = async (e) => { e.preventDefault(); try { await addDoc(collection(db, 'news'), {...news, createdAt: serverTimestamp()}); setNews({title:'', content:''}); } catch (e) { console.error(e); } };
             const deleteNews = async (id) => { if (confirmId === id) { await deleteDoc(doc(db, 'news', id)); setConfirmId(null); } else { setConfirmId(id); setTimeout(() => setConfirmId(null), 3000); } };
             return (
@@ -1084,7 +1261,7 @@
         function AdminPaymentApprovals() {
             const [requests, setRequests] = useState([]);
             const [confirmingId, setConfirmingId] = useState(null);
-            useEffect(() => { const q = query(collection(db, 'requests'), where('status', '==', 'payment_review')); const unsub = onSnapshot(q, (s) => { const data = s.docs.map(d => ({ id: d.id, ...d.data() })); data.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds); setRequests(data); }); return () => unsub(); }, []);
+            useEffect(() => { const q = query(collection(db, 'requests'), where('status', '==', 'payment_review')); const unsub = onSnapshot(q, (s) => { const data = s.docs.map(d => ({ id: d.id, ...d.data() })); data.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds); setRequests(data); }, e => console.log(e)); return () => unsub(); }, []);
             const handleClick = (id) => { if (confirmingId === id) { approvePayment(id); } else { setConfirmingId(id); setTimeout(() => setConfirmingId(null), 3000); } };
             const approvePayment = async (id) => { try { await updateDoc(doc(db, 'requests', id), { status: 'pending' }); setConfirmingId(null); } catch (e) { console.error(e); } };
             return (
@@ -1100,7 +1277,7 @@
                     const data = s.docs.map(d => ({id: d.id, ...d.data()}));
                     data.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds);
                     setGrievances(data);
-                });
+                }, e => console.log(e));
                 return () => unsub();
             }, []);
 
@@ -1134,7 +1311,7 @@
                     const data = s.docs.map(d => ({id: d.id, ...d.data()}));
                     data.sort((a,b) => (b.lastMessageTime?.seconds || 0) - (a.lastMessageTime?.seconds || 0));
                     setChats(data);
-                });
+                }, e => console.log(e));
                 return () => unsub();
             }, []);
             return (
@@ -1150,316 +1327,11 @@
                 const unsub = onSnapshot(q, (s) => {
                     setMessages(s.docs.map(d => ({id: d.id, ...d.data()})));
                     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-                });
+                }, e => console.log(e));
                 return () => unsub();
             }, [chat.id]);
             return (
                 <div className="flex flex-col h-full"><div className="p-4 border-b bg-gray-50 dark:bg-gray-700/50 dark:border-gray-700"><h4 className="font-bold text-gray-800 dark:text-white text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-gray-800">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{senderName}</span><span className="text-[10px] text-gray-400">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-sm text-gray-800 dark:text-gray-200">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
-            );
-        }
-
-        // --- ORG DASHBOARD ---
-        function OrgDashboard({ user, userData }) {
-            const [tab, setTab] = useState('profile');
-            const [isEditing, setIsEditing] = useState(false);
-            const [data, setData] = useState({ desc: userData?.description||'', services: userData?.services||[], newServiceName:'', newServicePrice: '', newServiceDesc: '' });
-            const [requests, setRequests] = useState([]);
-            const [activeChatId, setActiveChatId] = useState(null);
-            const [confirmingReqId, setConfirmingReqId] = useState(null);
-            // Profile Edit States
-            const [profileName, setProfileName] = useState(userData?.displayName || '');
-            const [profileEmail, setProfileEmail] = useState(user.email || '');
-            const [profileMsg, setProfileMsg] = useState({type:'', text:''});
-
-            // Password Edit States
-            const [pass, setPass] = useState('');
-            const [confirm, setConfirm] = useState('');
-            const [passMsg, setPassMsg] = useState({type:'', text:''});
-
-            useEffect(() => { 
-                if(userData) {
-                    setData(d => ({...d, desc: userData.description||'', services: userData.services||[] }));
-                    setProfileName(userData.displayName || '');
-                } 
-                if(user) setProfileEmail(user.email);
-            }, [userData, user]);
-
-            useEffect(() => {
-                const unsub = onSnapshot(query(collection(db, 'requests'), where('orgId', '==', user.uid)), (snapshot) => {
-                    const allRequests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setRequests(allRequests.filter(r => r.status !== 'payment_review'));
-                }, (e)=>console.error(e)); return () => unsub();
-            }, [user.uid]);
-
-            const saveProfile = async () => { await updateDoc(doc(db, 'users', user.uid), { description: data.desc, services: data.services }); setIsEditing(false); };
-            const handleReq = (id, status) => { const actionId = `${id}-${status}`; if (confirmingReqId === actionId) { confirmHandleReq(id, status); } else { setConfirmingReqId(actionId); setTimeout(() => setConfirmingReqId(null), 3000); } };
-            const confirmHandleReq = async (id, status) => { await updateDoc(doc(db, 'requests', id), { status }); setConfirmingReqId(null); };
-            const handleAddService = () => { if(data.newServiceName) { const newServiceObj = { name: data.newServiceName, price: data.newServicePrice, description: data.newServiceDesc }; setData({ ...data, services: [...data.services, newServiceObj], newServiceName: '', newServicePrice: '', newServiceDesc: '' }); } };
-
-            const handleUpdateOrgInfo = async (e) => {
-                e.preventDefault();
-                setProfileMsg({type:'', text:''});
-                try {
-                    // 1. Update Display Name in Auth and Firestore
-                    if(profileName !== userData.displayName) {
-                        await updateProfile(user, { displayName: profileName });
-                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                    }
-                    // 2. Update Email
-                    if(profileEmail !== user.email) {
-                        await updateEmail(user, profileEmail);
-                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
-                        setProfileMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
-                        // Optional: Sign out if email changed to force re-login with new email
-                    } else {
-                        setProfileMsg({type:'success', text:'Profile updated successfully!'});
-                    }
-                } catch(error) {
-                    if(error.code === 'auth/requires-recent-login') {
-                        setProfileMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
-                    } else {
-                        setProfileMsg({type:'error', text: error.message});
-                    }
-                }
-            };
-
-            const handleUpdatePassword = async (e) => {
-                e.preventDefault();
-                if (pass !== confirm) { setPassMsg({ type: 'error', text: 'Passwords do not match' }); return; }
-                try {
-                    await updatePassword(user, pass);
-                    setPassMsg({ type: 'success', text: 'Password updated successfully!' });
-                    setPass(''); setConfirm('');
-                } catch (error) {
-                    setPassMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Security: Please log out and login again to update password.' : error.message });
-                }
-            };
-
-            return (
-                <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
-                    <div className="lg:col-span-3">
-                        {tab === 'profile' && (
-                            <div className="space-y-6">
-                                <Card className="p-6">
-                                    <div className="flex justify-between mb-6"><h2 className="text-xl font-bold text-gray-900 dark:text-white">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
-                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">About</label>{isEditing ? <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded text-gray-700 dark:text-gray-300">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
-                                </Card>
-                                <Card className="p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Settings size={20} /> Account Settings</h3>
-                                    <form onSubmit={handleUpdateOrgInfo} className="space-y-4 max-w-md">
-                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`}>{profileMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Organization Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
-                                        <Button type="submit">Update Info</Button>
-                                    </form>
-                                </Card>
-                                <Card className="p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3>
-                                    <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
-                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{passMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
-                                        <Button type="submit">Update Password</Button>
-                                    </form>
-                                </Card>
-                            </div>
-                        )}
-                        {tab === 'requests' && (
-                            <Card className="p-6">
-                                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Requests</h3>
-                                <div className="space-y-3">
-                                    {requests.map(r => (
-                                        <div key={r.id} className="p-4 border dark:border-gray-700 rounded bg-white dark:bg-gray-700/50 flex justify-between items-center">
-                                            <div>
-                                                <div className="font-bold text-gray-900 dark:text-white">{r.serviceName} {r.servicePrice && <span className="text-gray-500 dark:text-gray-400 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">{r.userName || "User"}</div>
-                                                <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
-                                            </div>
-                                            {r.status === 'pending' && (
-                                                <div className="flex gap-2">
-                                                    <Button onClick={()=>handleReq(r.id, 'accepted')} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
-                                                    <Button onClick={()=>handleReq(r.id, 'declined')} variant={confirmingReqId === `${r.id}-declined` ? 'danger' : 'secondary'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-declined` ? 'Confirm?' : 'Decline'}</Button>
-                                                </div>
-                                            )}
-                                            {['accepted', 'in_progress', 'completed'].includes(r.status) && (
-                                                <div className="mt-2 md:mt-0">
-                                                    <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                                        <option value="accepted">Not Started</option>
-                                                        <option value="in_progress">In Progress</option>
-                                                        <option value="completed">Completed</option>
-                                                    </select>
-                                                </div>
-                                            )}
-                                            {r.status === 'cancelled' && <span className="text-sm text-gray-500 dark:text-gray-400 italic">Cancelled by User</span>}
-                                        </div>
-                                    ))}
-                                    {requests.length===0 && <p className="text-gray-500 dark:text-gray-400">No requests.</p>}
-                                </div>
-                            </Card>
-                        )}
-                        {tab === 'messages' && (<OrgChatList user={user} onSelectChat={setActiveChatId} />)}
-                        {tab === 'grievances' && <CommonGrievanceList user={user} role="organization" />}
-                    </div>
-                    {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
-                </div>
-            );
-        }
-
-        function OrgChatList({ user, onSelectChat }) {
-            const [chats, setChats] = useState([]);
-            useEffect(() => {
-                const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
-                const unsub = onSnapshot(q, (s) => {
-                    const chatData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    chatData.sort((a, b) => {
-                        const timeA = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : 0;
-                        const timeB = b.lastMessageTime?.toMillis ? b.lastMessageTime.toMillis() : 0;
-                        return timeB - timeA;
-                    });
-                    setChats(chatData);
-                });
-                return () => unsub();
-            }, [user.uid]);
-            
-            const getPartnerName = (chat) => { 
-                const partnerId = chat.participants.find(p => p !== user.uid); 
-                const pData = chat.participantData?.[partnerId];
-                return pData?.name || "User"; 
-            };
-            
-            return (<Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900 dark:text-white">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">No active conversations.</p>}</div></Card>);
-        }
-
-        // --- USER DASHBOARD ---
-        function UserDashboard({ user, userData }) {
-            const [activeChatId, setActiveChatId] = useState(null);
-            const [paymentModalData, setPaymentModalData] = useState(null);
-            const [orgs, setOrgs] = useState([]);
-            const [myRequests, setMyRequests] = useState([]);
-            const [searchTerm, setSearchTerm] = useState('');
-            const [tab, setTab] = useState('find_support');
-            const [confirmingCancelId, setConfirmingCancelId] = useState(null);
-
-            useEffect(() => { const unsubOrgs = onSnapshot(query(collection(db, 'users'), where('role', '==', 'organization'), where('isActive', '==', true)), s => setOrgs(s.docs.map(d => ({ id: d.id, ...d.data() })))); const unsubReq = onSnapshot(query(collection(db, 'requests'), where('userId', '==', user.uid)), s => setMyRequests(s.docs.map(d => ({ id: d.id, ...d.data() })))); return () => { unsubOrgs(); unsubReq(); }; }, [user.uid]);
-            const initiateRequest = (org, serviceObj) => { setPaymentModalData({ org, serviceName: typeof serviceObj === 'string' ? serviceObj : serviceObj.name, servicePrice: typeof serviceObj === 'object' && serviceObj.price ? serviceObj.price : null }); };
-            
-            const confirmPayment = async () => { if (!paymentModalData) return; try { await addDoc(collection(db, 'requests'), { userId: user.uid, userEmail: user.email, userName: userData.displayName || 'User', orgId: paymentModalData.org.id, orgName: paymentModalData.org.displayName, serviceName: paymentModalData.serviceName, servicePrice: paymentModalData.servicePrice, status: 'payment_review', createdAt: serverTimestamp() }); setPaymentModalData(null); } catch (e) { } };
-            
-            const cancelRequest = async (id) => {
-                if (confirmingCancelId === id) {
-                    try {
-                        await updateDoc(doc(db, 'requests', id), { status: 'cancelled' });
-                        setConfirmingCancelId(null);
-                    } catch(e) { console.error("Error cancelling:", e); }
-                } else {
-                    setConfirmingCancelId(id);
-                    setTimeout(() => setConfirmingCancelId(null), 3000);
-                }
-            };
-
-            const startChat = async (org) => { 
-                const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid)); 
-                const snapshot = await getDocs(q); 
-                const existingChat = snapshot.docs.find(doc => doc.data().participants.includes(org.id)); 
-                if (existingChat) { setActiveChatId(existingChat.id); } 
-                else { 
-                    const newChatRef = await addDoc(collection(db, 'chats'), { 
-                        participants: [user.uid, org.id], 
-                        participantData: { [user.uid]: { name: user.displayName || 'User', email: user.email }, [org.id]: { name: org.displayName, email: org.email } }, 
-                        createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() 
-                    }); 
-                    setActiveChatId(newChatRef.id); 
-                } 
-            };
-            const filteredOrgs = orgs.filter(o => o.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.services?.some(s => (typeof s === 'string' ? s : s.name).toLowerCase().includes(searchTerm.toLowerCase())));
-
-            return (
-                <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
-                    <div className="lg:col-span-3">
-                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{org.displayName}</h3><p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
-                        {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
-                            <div key={r.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700 text-sm flex justify-between items-center">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-indigo-900 dark:text-indigo-300">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
-                                        <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status === 'payment_review' ? 'Payment Review' : r.status}</Badge>
-                                    </div>
-                                    <div className="text-gray-600 dark:text-gray-400 text-xs">{r.orgName}</div>
-                                </div>
-                                {['pending', 'payment_review'].includes(r.status) && (
-                                    <button 
-                                        onClick={() => cancelRequest(r.id)} 
-                                        className={`text-xs underline ${confirmingCancelId === r.id ? 'text-red-700 dark:text-red-400 font-bold' : 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300'}`}
-                                    >
-                                        {confirmingCancelId === r.id ? "Confirm Cancel?" : "Cancel Request"}
-                                    </button>
-                                )}
-                            </div>
-                        ))}</div></Card>)}
-                        {tab === 'profile' && <UserProfile user={user} userData={userData} />}
-                        {tab === 'grievances' && <CommonGrievanceList user={user} role="user" />}
-                    </div>
-                    {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
-                    {paymentModalData && (<div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"><div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border dark:border-gray-700"><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Payment</h3><p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600 dark:text-indigo-400">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 dark:text-gray-400 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 dark:text-gray-200 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 dark:text-indigo-400 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
-                </div>
-            );
-        }
-
-        function UserProfile({ user, userData }) {
-            const [pass, setPass] = useState('');
-            const [confirm, setConfirm] = useState('');
-            const [msg, setMsg] = useState({ type: '', text: '' });
-            const [profileName, setProfileName] = useState(userData?.displayName || '');
-            const [profileEmail, setProfileEmail] = useState(user.email || '');
-            const [infoMsg, setInfoMsg] = useState({ type: '', text: '' });
-
-            useEffect(() => { 
-                if(userData) setProfileName(userData.displayName || '');
-                if(user) setProfileEmail(user.email);
-            }, [userData, user]);
-
-            const handleUpdatePassword = async (e) => { e.preventDefault(); if (pass !== confirm) { setMsg({ type: 'error', text: 'Passwords do not match' }); return; } try { await updatePassword(user, pass); setMsg({ type: 'success', text: 'Password updated successfully!' }); setPass(''); setConfirm(''); } catch (error) { setMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Please log out and login again to update password.' : error.message }); } };
-            
-            const handleUpdateInfo = async (e) => {
-                e.preventDefault();
-                setInfoMsg({type:'', text:''});
-                try {
-                    if(profileName !== userData.displayName) {
-                        await updateProfile(user, { displayName: profileName });
-                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                    }
-                    if(profileEmail !== user.email) {
-                        await updateEmail(user, profileEmail);
-                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
-                        setInfoMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
-                    } else {
-                        setInfoMsg({type:'success', text:'Profile updated successfully!'});
-                    }
-                } catch(error) {
-                    if(error.code === 'auth/requires-recent-login') {
-                        setInfoMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
-                    } else {
-                        setInfoMsg({type:'error', text: error.message});
-                    }
-                }
-            };
-
-            return (
-                <div className="space-y-6">
-                    <Card className="p-6">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600 dark:text-indigo-400" /> Account Details</h3>
-                        <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
-                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
-                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
-                            <Button type="submit">Update Info</Button>
-                        </form>
-                    </Card>
-                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
-                </div>
             );
         }
 

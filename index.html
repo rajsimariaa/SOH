@@ -71,7 +71,8 @@
             signOut,
             updatePassword,
             updateEmail,
-            updateProfile
+            updateProfile,
+            sendEmailVerification
         } from 'firebase/auth';
         import { 
             getFirestore, 
@@ -95,7 +96,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Activity, Gift, Sun, Moon // Added Sun, Moon icons
+            BookOpen, Users, Activity, Gift, Sun, Moon, Mail
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -155,6 +156,68 @@
             return <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
         };
 
+        // --- VERIFY EMAIL COMPONENT ---
+        function VerifyEmailPage({ user, onSignOut }) {
+            const [sent, setSent] = useState(false);
+            const [error, setError] = useState('');
+            const [checking, setChecking] = useState(false);
+
+            const resendEmail = async () => {
+                try {
+                    await sendEmailVerification(user);
+                    setSent(true);
+                    setError('');
+                } catch (e) {
+                    setError('Too many requests. Please wait before retrying.');
+                }
+            };
+
+            const checkVerification = async () => {
+                setChecking(true);
+                try {
+                    await user.reload();
+                    if (user.emailVerified) {
+                        window.location.reload(); 
+                    } else {
+                        setError('Email not yet verified. Please check your inbox.');
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+                setChecking(false);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+                    <Card className="max-w-md w-full p-8 text-center">
+                        <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Mail size={32} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verify your email</h2>
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">
+                            We've sent a verification link to <strong>{user.email}</strong>.<br/>
+                            Please verify your email to access the platform.
+                        </p>
+                        
+                        {sent && <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm">Verification email sent!</div>}
+                        {error && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">{error}</div>}
+
+                        <div className="space-y-3">
+                            <Button onClick={checkVerification} className="w-full justify-center" disabled={checking}>
+                                {checking ? 'Checking...' : "I've Verified My Email"}
+                            </Button>
+                            <Button variant="secondary" onClick={resendEmail} className="w-full justify-center" disabled={sent}>
+                                Resend Email
+                            </Button>
+                            <button onClick={onSignOut} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline mt-4">
+                                Sign Out
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            );
+        }
+
         // --- TERMS MODAL ---
         function TermsModal({ onClose }) {
             return (
@@ -167,60 +230,16 @@
                             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-1 transition-colors"><X size={24} /></button>
                         </div>
                         <div className="p-6 overflow-y-auto text-sm text-gray-700 dark:text-gray-300 space-y-6 leading-relaxed">
-                            {/* Content remains same, text colors handled by parent class */}
                             <div>
                                 <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">Shades of Hue: Official Platform Policies and Guidelines</h4>
                                 <p>These policies govern the conduct of all users, customers, and partnered organizations within the Shades of Hue platform.</p>
                             </div>
-                            
                             <div>
                                 <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">I. Core Principles and Code of Conduct</h4>
                                 <p>These principles are the foundation of our community and mandate the highest standards of professional and ethical behavior.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Mission Alignment:</strong> All panel organizations must actively align with the mission of supporting and empowering the queer community. Adherence to a strict Non-Discrimination Policy based on sexual orientation, gender identity, religion, background, or ability is mandatory.</li>
-                                    <li><strong>Respect and Professionalism:</strong> We enforce a Zero-Tolerance Policy for rude, aggressive, discriminatory, or harassing behavior. Professionalism is expected at all times toward customers, platform users, and Shades of Hue administrators.</li>
-                                    <li><strong>Prioritization of Stakeholders:</strong> The platform is dedicated to ensuring the highest quality service and privacy for our Customers while providing clear operational guidelines and fair support for our Partner Organizations.</li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">II. Customer Privacy and Data Protection Policy</h4>
-                                <p>Protecting the highly sensitive information of our users is our top priority.</p>
-                                <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Anonymity & Confidentiality:</strong> User data is encrypted and handled in strict confidence. Customers have the right to maintain a degree of anonymity until they choose to share further details directly with a partner organization.</li>
-                                    <li><strong>Limited Information Disclosure to Partners:</strong> Upon a confirmed match, partner organizations will only be provided with the minimal, non-sensitive identifying details required to initiate service: Name (or preferred name), Pronouns, Age, Email ID.</li>
-                                    <li><strong>Monitoring for Safety:</strong> For the protection of all parties and to maintain platform integrity, all primary chat initiations within the Shades of Hue application are monitored by trained administrators. This monitoring is solely for dispute resolution and policy enforcement (e.g., preventing poaching).</li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">III. Service Request Management and Service Level Agreement (SLA)</h4>
-                                <p>These rules define the required response times and communication standards for partner organizations.</p>
-                                <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Request Acceptance Window:</strong> Partner organizations must review all submitted customer requests and issue a definitive Accept or Decline decision within a maximum period of 10 business days (1 to 2 weeks) from the time the request is assigned.</li>
-                                    <li><strong>Mandatory Decline Rationale:</strong> If a request is declined, the organization is required to provide a clear and concise reason to Shades of Hue administration (e.g., capacity issues, specialization mismatch, conflict of interest).</li>
-                                    <li><strong>Optimal Matching Commitment:</strong> Shades of Hue commits to matching customers with the most suitable partner based on the customer’s needs and the organization’s expertise, ensuring a targeted and high-quality connection.</li>
-                                </ul>
-                            </div>
-                            
-                             <div>
-                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">IV. Accountability and Quality Assurance (Three-Strike Policy)</h4>
-                                <p>This system ensures high service standards while providing a fair process for resolving conflicts.</p>
-                                <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Grounds for a Strike:</strong> A strike may be issued to a partner organization for instances of failure to satisfy a customer’s essential needs or if a customer issue significantly escalates due to negligence, prolonged unresponsiveness, or poor conduct.</li>
-                                    <li><strong>Dispute Resolution Meeting:</strong> Strikes are not applied automatically. Before any strike is issued, a mandatory Dispute Resolution Meeting will be held. This meeting will include the customer, the organization’s representative, and a Shades of Hue administrator, who will objectively review all facts and testimony to render a final decision.</li>
-                                    <li><strong>Suspension Protocol (Revised):</strong> An organization that accumulates three (3) strikes within any rolling 30-day period will not be able to receive new customer leads suspended for thirty (30) days/one (1) calendar month.</li>
-                                    <li><strong>Continuity of Service:</strong> Crucially, the suspension only restricts new leads. The organization must continue and complete all ongoing services, projects, or existing client relationships during the suspension period without interruption.</li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h4 className="font-bold text-base text-gray-800 dark:text-gray-200 mb-2">V. Ethical Conduct, Partner Protection, and Termination</h4>
-                                <p>These rules protect the platform's ecosystem and ensure fair operating procedures for all partners.</p>
-                                <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Zero-Tolerance for Customer Poaching:</strong> Any attempt by a partner organization to solicit, recruit, or poach a customer outside of the Shades of Hue platform—where the initial engagement was facilitated and monitored via our app’s chat—will result in the immediate and permanent termination of the organization's account and its listing.</li>
-                                    <li><strong>Mandatory Reporting of Issues:</strong> Partner organizations are required to report any disruptive, abusive, or problematic behavior from a customer to the Shades of Hue administration at the earliest opportunity for intervention and support.</li>
-                                    <li><strong>Voluntary Termination Notice:</strong> If a partner organization decides to terminate its relationship with Shades of Hue, they are required to serve a mandatory 30-day termination period. During this period, they must complete all existing commitments and may not accept any new leads.</li>
+                                    <li><strong>Mission Alignment:</strong> All panel organizations must actively align with the mission of supporting and empowering the queer community.</li>
+                                    <li><strong>Respect and Professionalism:</strong> We enforce a Zero-Tolerance Policy for rude, aggressive, discriminatory, or harassing behavior.</li>
                                 </ul>
                             </div>
                         </div>
@@ -236,7 +255,7 @@
         function DonationModal({ onClose }) {
             const [name, setName] = useState('');
             const [amount, setAmount] = useState('');
-            const [step, setStep] = useState(1); // 1: Details, 2: UPI/Confirm
+            const [step, setStep] = useState(1); 
 
             const handleNext = (e) => {
                 e.preventDefault();
@@ -298,6 +317,78 @@
             );
         }
 
+        // --- NAVBAR COMPONENT ---
+        function Navbar({ user, role, onNavigate, onSignOut, currentView, theme, toggleTheme }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const NavLink = ({ target, label, icon: Icon }) => (
+                <button onClick={() => { onNavigate(target); setIsOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === target ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}>
+                    {Icon && <Icon size={16} />} {label}
+                </button>
+            );
+            const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'User';
+
+            return (
+                <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-200">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between h-16">
+                            <div className="flex items-center">
+                                <button onClick={() => onNavigate('home')} className="flex-shrink-0 flex items-center gap-2 cursor-pointer">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">S</div>
+                                    <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Shades of Hue</span>
+                                </button>
+                            </div>
+                            <div className="hidden md:flex items-center space-x-4">
+                                <NavLink target="home" label="Home" icon={Newspaper} />
+                                {!user ? (
+                                    <>
+                                        <Button variant="ghost" onClick={() => onNavigate('login')}>Sign In</Button>
+                                        <Button variant="primary" onClick={() => onNavigate('signup')}>Join Us</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        {role && <NavLink target="dashboard" label={`${roleLabel} Dashboard`} icon={Briefcase} />}
+                                        <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-2"></div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-right hidden lg:block">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{user.email}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{role || '...'}</p>
+                                            </div>
+                                            <Button variant="secondary" onClick={onSignOut} className="!px-3"><LogOut size={16} /></Button>
+                                        </div>
+                                    </>
+                                )}
+                                <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                                </button>
+                            </div>
+                            <div className="flex items-center md:hidden gap-2">
+                                <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                                </button>
+                                <button onClick={() => setIsOpen(!isOpen)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white p-2">
+                                    {isOpen ? <X size={24} /> : <Menu size={24} />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {isOpen && (
+                        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 pt-2 pb-3 space-y-1">
+                            <NavLink target="home" label="Home" icon={Newspaper} />
+                            {user && role && <NavLink target="dashboard" label="Dashboard" icon={Briefcase} />}
+                            {!user ? (
+                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700">
+                                    <Button variant="secondary" onClick={() => { onNavigate('login'); setIsOpen(false); }}>Sign In</Button>
+                                    <Button variant="primary" onClick={() => { onNavigate('signup'); setIsOpen(false); }}>Join Us</Button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700"><Button variant="danger" onClick={() => { onSignOut(); setIsOpen(false); }}>Sign Out</Button></div>
+                            )}
+                        </div>
+                    )}
+                </nav>
+            );
+        }
+
         // --- MAIN APP COMPONENT ---
         function App() {
             const [currentUser, setCurrentUser] = useState(null);
@@ -305,6 +396,7 @@
             const [userData, setUserData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [view, setView] = useState('home'); 
+            const [verificationRequired, setVerificationRequired] = useState(false);
             
             // Theme Management
             const [theme, setTheme] = useState(() => {
@@ -348,12 +440,21 @@
                                     setCurrentUser(null);
                                     setUserRole(null);
                                     setView('home');
+                                    setVerificationRequired(false);
                                 } else {
                                     setUserData(data);
                                     setUserRole(data.role);
+                                    // CHECK VERIFICATION FOR REGULAR USERS ONLY
+                                    if (data.role === 'user' && !user.emailVerified) {
+                                        setVerificationRequired(true);
+                                    } else {
+                                        setVerificationRequired(false);
+                                    }
                                 }
                             } else {
                                 setUserRole('user'); 
+                                // Default new user check
+                                if (!user.emailVerified) setVerificationRequired(true);
                             }
                         } catch (error) {
                             console.error("Error fetching user data:", error);
@@ -364,6 +465,7 @@
                         setUserData(null);
                         setUserRole(null);
                         setView('home');
+                        setVerificationRequired(false);
                     }
                     setLoading(false);
                 });
@@ -376,7 +478,6 @@
                 
                 const updatePresence = async () => {
                     try {
-                        // Update the user's document with the current timestamp
                         await updateDoc(doc(db, 'users', currentUser.uid), {
                             lastSeen: serverTimestamp()
                         });
@@ -385,22 +486,23 @@
                     }
                 };
 
-                // Update immediately on mount/login
                 updatePresence();
-
-                // Update every minute to keep "Online" status fresh
                 const intervalId = setInterval(updatePresence, 60 * 1000);
-
                 return () => clearInterval(intervalId);
             }, [currentUser]);
 
-            const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
+            const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); setVerificationRequired(false); };
 
             if (loading) return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
                 </div>
             );
+
+            // BLOCK ACCESS IF VERIFICATION IS REQUIRED
+            if (verificationRequired) {
+                return <VerifyEmailPage user={currentUser} onSignOut={handleSignOut} />;
+            }
 
             return (
                 <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-200">
@@ -413,197 +515,6 @@
                         {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
                         {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}
                     </main>
-                </div>
-            );
-        }
-
-        // --- SHARED COMPONENTS ---
-        function Navbar({ user, role, onNavigate, onSignOut, currentView, theme, toggleTheme }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const NavLink = ({ target, label, icon: Icon }) => (
-                <button onClick={() => { onNavigate(target); setIsOpen(false); }} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === target ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}>
-                    {Icon && <Icon size={16} />} {label}
-                </button>
-            );
-            const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'User';
-
-            return (
-                <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-200">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-between h-16">
-                            <div className="flex items-center">
-                                <button onClick={() => onNavigate('home')} className="flex-shrink-0 flex items-center gap-2 cursor-pointer">
-                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">S</div>
-                                    <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Shades of Hue</span>
-                                </button>
-                            </div>
-                            <div className="hidden md:flex items-center space-x-4">
-                                <NavLink target="home" label="Home" icon={Newspaper} />
-                                {!user ? (
-                                    <>
-                                        <Button variant="ghost" onClick={() => onNavigate('login')}>Sign In</Button>
-                                        <Button variant="primary" onClick={() => onNavigate('signup')}>Join Us</Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        {role && <NavLink target="dashboard" label={`${roleLabel} Dashboard`} icon={Briefcase} />}
-                                        <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-2"></div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-right hidden lg:block">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{role || '...'}</p>
-                                            </div>
-                                            <Button variant="secondary" onClick={onSignOut} className="!px-3"><LogOut size={16} /></Button>
-                                        </div>
-                                    </>
-                                )}
-                                <div className="border-l border-gray-300 dark:border-gray-600 h-6 mx-2"></div>
-                                <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" aria-label="Toggle Theme">
-                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                                </button>
-                            </div>
-                            <div className="flex items-center md:hidden gap-3">
-                                <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
-                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                                </button>
-                                <button onClick={() => setIsOpen(!isOpen)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white p-2">{isOpen ? <X size={24} /> : <Menu size={24} />}</button>
-                            </div>
-                        </div>
-                    </div>
-                    {isOpen && (
-                        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 pt-2 pb-3 space-y-1">
-                            <NavLink target="home" label="Home" icon={Newspaper} />
-                            {user && role && <NavLink target="dashboard" label="Dashboard" icon={Briefcase} />}
-                            {!user ? (
-                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700">
-                                    <Button variant="secondary" onClick={() => { onNavigate('login'); setIsOpen(false); }}>Sign In</Button>
-                                    <Button variant="primary" onClick={() => { onNavigate('signup'); setIsOpen(false); }}>Join Us</Button>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100 dark:border-gray-700"><Button variant="danger" onClick={() => { onSignOut(); setIsOpen(false); }}>Sign Out</Button></div>
-                            )}
-                        </div>
-                    )}
-                </nav>
-            );
-        }
-
-        function ChatWindow({ chatId, onClose, currentUser }) {
-            const [messages, setMessages] = useState([]);
-            const [newMessage, setNewMessage] = useState('');
-            const [chatInfo, setChatInfo] = useState(null);
-            const bottomRef = useRef(null);
-
-            useEffect(() => {
-                const fetchChatInfo = async () => {
-                    try {
-                        const docSnap = await getDoc(doc(db, 'chats', chatId));
-                        if (docSnap.exists()) setChatInfo(docSnap.data());
-                    } catch (e) { console.error("Chat info error:", e); }
-                };
-                fetchChatInfo();
-                const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-                }, (error) => console.error("Chat messages error:", error));
-                return () => unsubscribe();
-            }, [chatId]);
-
-            const sendMessage = async (e) => {
-                e.preventDefault();
-                if (!newMessage.trim()) return;
-                try {
-                    await addDoc(collection(db, 'chats', chatId, 'messages'), {
-                        text: newMessage, senderId: currentUser.uid, senderEmail: currentUser.email, timestamp: serverTimestamp()
-                    });
-                    await updateDoc(doc(db, 'chats', chatId), { lastMessage: newMessage, lastMessageTime: serverTimestamp() });
-                    setNewMessage('');
-                } catch (error) { console.error("Error sending message:", error); }
-            };
-
-            const getOtherParticipantName = () => {
-                if (!chatInfo || !chatInfo.participantData) return "Chat";
-                const otherUid = chatInfo.participants.find(uid => uid !== currentUser.uid);
-                const participant = chatInfo.participantData[otherUid];
-                return participant?.name || "User";
-            };
-
-            return (
-                <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden">
-                    <div className="bg-indigo-600 dark:bg-indigo-700 text-white p-4 flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-2"><MessageCircle size={20} /><span className="font-bold truncate">{getOtherParticipantName()}</span></div>
-                        <button onClick={onClose} className="hover:bg-indigo-700 dark:hover:bg-indigo-600 p-1 rounded"><X size={18} /></button>
-                    </div>
-                    <div className="flex-grow p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col gap-3">
-                        {messages.map((msg) => {
-                            const isMe = msg.senderId === currentUser.uid;
-                            return (
-                                <div key={msg.id} className={`max-w-[80%] p-3 rounded-lg text-sm ${isMe ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-900 dark:text-indigo-100 self-end rounded-br-none' : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 self-start rounded-bl-none'}`}>
-                                    <p>{msg.text}</p>
-                                    <p className={`text-[10px] mt-1 ${isMe ? 'text-indigo-400 dark:text-indigo-300' : 'text-gray-400 dark:text-gray-400'}`}>{msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</p>
-                                </div>
-                            );
-                        })}
-                        <div ref={bottomRef} />
-                    </div>
-                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 shrink-0">
-                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-grow px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
-                        <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Send size={18} /></button>
-                    </form>
-                </div>
-            );
-        }
-
-        // --- COMMON COMPONENTS ---
-        function CommonGrievanceList({ user, role }) {
-            const [grievances, setGrievances] = useState([]);
-            const [subject, setSubject] = useState('');
-            const [description, setDescription] = useState('');
-            
-            useEffect(() => {
-                const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
-                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))));
-                return () => unsub();
-            }, [user.uid]);
-
-            const submitGrievance = async (e) => {
-                e.preventDefault();
-                await addDoc(collection(db, 'grievances'), {
-                    userId: user.uid,
-                    userEmail: user.email,
-                    userName: user.displayName || user.email,
-                    userRole: role,
-                    subject,
-                    description,
-                    status: 'pending',
-                    createdAt: serverTimestamp()
-                });
-                setSubject(''); setDescription(''); alert("Grievance submitted.");
-            };
-
-            return (
-                <div className="space-y-6">
-                    <Card className="p-6">
-                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Submit Grievance</h3>
-                        <form onSubmit={submitGrievance} className="space-y-4">
-                            <input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Subject" value={subject} onChange={e=>setSubject(e.target.value)} required />
-                            <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Describe your issue..." value={description} onChange={e=>setDescription(e.target.value)} required />
-                            <Button type="submit">Submit</Button>
-                        </form>
-                    </Card>
-                    <Card className="p-6">
-                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">My Grievances</h3>
-                        <div className="space-y-2">
-                            {grievances.map(g => (
-                                <div key={g.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50">
-                                    <div className="flex justify-between font-bold text-gray-900 dark:text-white"><span>{g.subject}</span><Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
-                                    <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">{g.description}</p>
-                                </div>
-                            ))}
-                            {grievances.length===0 && <p className="text-gray-500 dark:text-gray-400">No records found.</p>}
-                        </div>
-                    </Card>
                 </div>
             );
         }
@@ -645,12 +556,12 @@
                     
                     {/* Mission & Vision */}
                     <div className="grid md:grid-cols-2 gap-8">
-                        <Card className="p-8 bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border-indigo-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400"><Heart size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Mission</h2></div>
+                        <Card className="p-8 bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-750 border-indigo-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-300"><Heart size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Mission</h2></div>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed">To provide a safe, accessible, and affirmative platform for Queer individuals to access essential services.</p>
                         </Card>
-                        <Card className="p-8 bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-purple-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-purple-600 dark:text-purple-400"><Shield size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Vision</h2></div>
+                        <Card className="p-8 bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-750 border-purple-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-purple-600 dark:text-purple-300"><Shield size={24} /></div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Our Vision</h2></div>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed">A world where every Queer individual has equal access to healthcare, legal aid, housing, and community support.</p>
                         </Card>
                     </div>
@@ -668,7 +579,7 @@
                             { icon: Users, title: "Inclusivity Workshops", desc: "Sensitization and awareness sessions for organizations." },
                             { icon: Heart, title: "Mental Health", desc: "Counseling and support groups for emotional well-being." }
                           ].map((s, i) => (
-                            <Card key={i} className="p-6 text-center hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-750 transition-all">
+                            <Card key={i} className="p-6 text-center hover:shadow-md dark:hover:bg-gray-750 transition-all">
                               <div className="w-12 h-12 mx-auto bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
                                 <s.icon size={24} />
                               </div>
@@ -683,7 +594,7 @@
                         <div className="flex items-center gap-3 mb-6"><Newspaper className="text-indigo-600 dark:text-indigo-400" /><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest Updates</h2></div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {news.length > 0 ? news.map(item => (
-                                <Card key={item.id} className="p-6 flex flex-col h-full hover:shadow-md dark:hover:shadow-none dark:hover:bg-gray-750 transition-all">
+                                <Card key={item.id} className="p-6 flex flex-col h-full hover:shadow-md transition-shadow">
                                     <div className="mb-4"><span className="text-xs font-medium text-gray-500 dark:text-gray-400">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span><h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{item.title}</h3></div>
                                     <p className="text-gray-600 dark:text-gray-300 text-sm flex-grow whitespace-pre-wrap">{item.content}</p>
                                 </Card>
@@ -732,6 +643,9 @@
                 try { 
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password); 
                     
+                    // SEND VERIFICATION EMAIL
+                    await sendEmailVerification(userCredential.user);
+
                     // Create User DB Entry 
                     await setDoc(doc(db, 'users', userCredential.user.uid), { 
                         uid: userCredential.user.uid, 
@@ -742,10 +656,10 @@
                         termsAccepted: true,
                         termsAcceptedAt: serverTimestamp(),
                         createdAt: serverTimestamp(),
-                        lastSeen: serverTimestamp() // Set initial lastSeen
+                        lastSeen: serverTimestamp()
                     }); 
 
-                    onNavigate('home'); 
+                    // Do not navigate to home, the App component will catch the unverified state and show the VerifyEmailPage
                 } catch (err) { 
                     setError(err.message); 
                 } 
@@ -783,10 +697,129 @@
             );
         }
 
+        function ChatWindow({ chatId, onClose, currentUser }) {
+            const [messages, setMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const [chatInfo, setChatInfo] = useState(null);
+            const bottomRef = useRef(null);
+
+            useEffect(() => {
+                const fetchChatInfo = async () => {
+                    try {
+                        const docSnap = await getDoc(doc(db, 'chats', chatId));
+                        if (docSnap.exists()) setChatInfo(docSnap.data());
+                    } catch (e) { console.error("Chat info error:", e); }
+                };
+                fetchChatInfo();
+                const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                }, (error) => console.error("Chat messages error:", error));
+                return () => unsubscribe();
+            }, [chatId]);
+
+            const sendMessage = async (e) => {
+                e.preventDefault();
+                if (!newMessage.trim()) return;
+                try {
+                    await addDoc(collection(db, 'chats', chatId, 'messages'), {
+                        text: newMessage, senderId: currentUser.uid, senderEmail: currentUser.email, timestamp: serverTimestamp()
+                    });
+                    await updateDoc(doc(db, 'chats', chatId), { lastMessage: newMessage, lastMessageTime: serverTimestamp() });
+                    setNewMessage('');
+                } catch (error) { console.error("Error sending message:", error); }
+            };
+
+            const getOtherParticipantName = () => {
+                if (!chatInfo || !chatInfo.participantData) return "Chat";
+                const otherUid = chatInfo.participants.find(uid => uid !== currentUser.uid);
+                const participant = chatInfo.participantData[otherUid];
+                return participant?.name || "User";
+            };
+
+            return (
+                <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden">
+                    <div className="bg-indigo-600 text-white p-4 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2"><MessageCircle size={20} /><span className="font-bold truncate">{getOtherParticipantName()}</span></div>
+                        <button onClick={onClose} className="hover:bg-indigo-700 p-1 rounded"><X size={18} /></button>
+                    </div>
+                    <div className="flex-grow p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col gap-3">
+                        {messages.map((msg) => {
+                            const isMe = msg.senderId === currentUser.uid;
+                            return (
+                                <div key={msg.id} className={`max-w-[80%] p-3 rounded-lg text-sm ${isMe ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 self-end rounded-br-none' : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 self-start rounded-bl-none'}`}>
+                                    <p>{msg.text}</p>
+                                    <p className={`text-[10px] mt-1 ${isMe ? 'text-indigo-400 dark:text-indigo-300' : 'text-gray-400 dark:text-gray-400'}`}>{msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</p>
+                                </div>
+                            );
+                        })}
+                        <div ref={bottomRef} />
+                    </div>
+                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 shrink-0">
+                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-grow px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-gray-900 dark:text-white" />
+                        <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Send size={18} /></button>
+                    </form>
+                </div>
+            );
+        }
+
+        function CommonGrievanceList({ user, role }) {
+            const [grievances, setGrievances] = useState([]);
+            const [subject, setSubject] = useState('');
+            const [description, setDescription] = useState('');
+            
+            useEffect(() => {
+                const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
+                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                return () => unsub();
+            }, [user.uid]);
+
+            const submitGrievance = async (e) => {
+                e.preventDefault();
+                await addDoc(collection(db, 'grievances'), {
+                    userId: user.uid,
+                    userEmail: user.email,
+                    userName: user.displayName || user.email,
+                    userRole: role,
+                    subject,
+                    description,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+                setSubject(''); setDescription(''); alert("Grievance submitted.");
+            };
+
+            return (
+                <div className="space-y-6">
+                    <Card className="p-6">
+                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Submit Grievance</h3>
+                        <form onSubmit={submitGrievance} className="space-y-4">
+                            <input className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Subject" value={subject} onChange={e=>setSubject(e.target.value)} required />
+                            <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Describe your issue..." value={description} onChange={e=>setDescription(e.target.value)} required />
+                            <Button type="submit">Submit</Button>
+                        </form>
+                    </Card>
+                    <Card className="p-6">
+                        <h3 className="font-bold mb-4 text-gray-900 dark:text-white">My Grievances</h3>
+                        <div className="space-y-2">
+                            {grievances.map(g => (
+                                <div key={g.id} className="p-3 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50">
+                                    <div className="flex justify-between font-bold text-gray-900 dark:text-white"><span>{g.subject}</span><Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
+                                    <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">{g.description}</p>
+                                </div>
+                            ))}
+                            {grievances.length===0 && <p className="text-gray-500 dark:text-gray-400">No records found.</p>}
+                        </div>
+                    </Card>
+                </div>
+            );
+        }
+
         // --- ADMIN DASHBOARD ---
         function AdminDashboard({ user }) {
             const [activeTab, setActiveTab] = useState('users');
-            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}><Icon size={18} />{label}</button>;
+            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}><Icon size={18} />{label}</button>;
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1 space-y-4">
@@ -831,11 +864,11 @@
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-700/50">
-                                    <th className="p-3">Date</th>
-                                    <th className="p-3">Donor Name</th>
-                                    <th className="p-3 text-right">Amount</th>
-                                    <th className="p-3 text-right">Status</th>
+                                <tr className="border-b text-gray-500 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/50">
+                                    <th className="p-3 text-gray-500 dark:text-gray-400">Date</th>
+                                    <th className="p-3 text-gray-500 dark:text-gray-400">Donor Name</th>
+                                    <th className="p-3 text-right text-gray-500 dark:text-gray-400">Amount</th>
+                                    <th className="p-3 text-right text-gray-500 dark:text-gray-400">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -882,7 +915,7 @@
                         <select 
                             value={filter} 
                             onChange={(e) => setFilter(e.target.value)}
-                            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
+                            className="p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
                         >
                             <option value="all">All Status</option>
                             <option value="payment_review">Payment Review</option>
@@ -898,13 +931,13 @@
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-700/50">
-                                    <th className="p-3 font-medium whitespace-nowrap">Date</th>
-                                    <th className="p-3 font-medium whitespace-nowrap">User</th>
-                                    <th className="p-3 font-medium whitespace-nowrap">Organization</th>
-                                    <th className="p-3 font-medium whitespace-nowrap">Service</th>
-                                    <th className="p-3 font-medium text-right whitespace-nowrap">Price</th>
-                                    <th className="p-3 font-medium text-right whitespace-nowrap">Status</th>
+                                <tr className="border-b text-gray-500 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/50">
+                                    <th className="p-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400">Date</th>
+                                    <th className="p-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400">User</th>
+                                    <th className="p-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400">Organization</th>
+                                    <th className="p-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400">Service</th>
+                                    <th className="p-3 font-medium text-right whitespace-nowrap text-gray-500 dark:text-gray-400">Price</th>
+                                    <th className="p-3 font-medium text-right whitespace-nowrap text-gray-500 dark:text-gray-400">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -967,7 +1000,7 @@
             const deleteUser = async (uid) => { if (confirmingId === uid) { await deleteDoc(doc(db, 'users', uid)); setConfirmingId(null); } else { setConfirmingId(uid); setTimeout(() => setConfirmingId(null), 3000); } };
             
             return (
-                <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500 dark:text-gray-400 dark:border-gray-700"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y dark:divide-gray-700">{users.map(u => {
+                <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500 dark:border-gray-700"><th className="text-gray-500 dark:text-gray-400">User</th><th className="text-gray-500 dark:text-gray-400">Role</th><th className="text-gray-500 dark:text-gray-400">Online Status</th><th className="text-gray-500 dark:text-gray-400">Last Seen</th><th className="text-gray-500 dark:text-gray-400">Account Status</th><th className="text-right text-gray-500 dark:text-gray-400">Actions</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-700">{users.map(u => {
                     // Logic for Online Status
                     const now = new Date();
                     const lastSeen = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date(0);
@@ -975,7 +1008,7 @@
                     const isOnline = diff < 2; // Consider online if seen in last 2 mins
 
                     return (
-                        <tr key={u.id} className={!u.isActive ? "bg-amber-50 dark:bg-amber-900/10" : "dark:text-gray-300"}>
+                        <tr key={u.id} className={!u.isActive ? "bg-amber-50 dark:bg-amber-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}>
                             <td className="py-3">
                                 <div className="font-medium text-gray-900 dark:text-white">{u.displayName}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">{u.email}</div>
@@ -985,7 +1018,7 @@
                             {/* NEW: Online Status Column */}
                             <td>
                                 {isOnline ? (
-                                    <span className="flex items-center gap-1.5 text-green-700 dark:text-green-400 font-medium text-xs bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full w-fit">
+                                    <span className="flex items-center gap-1.5 text-green-700 dark:text-green-400 font-medium text-xs bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full w-fit">
                                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
                                     </span>
                                 ) : (
@@ -1001,7 +1034,7 @@
                             </td>
 
                             <td>{u.isActive?<span className="text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle size={14}/> Active</span>:<span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Clock size={14}/> Pending</span>}</td>
-                            <td className="text-right space-x-2">{!SUPER_ADMINS.includes(u.email) && <><button onClick={()=>toggleStatus(u.id, u.isActive)} className={!u.isActive ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 p-1 rounded" : "text-gray-400 dark:text-gray-500"} title={u.isActive ? "Deactivate" : "Approve"}>{u.isActive ? <XCircle size={16}/> : <CheckCircle size={16}/>}</button><button onClick={()=>deleteUser(u.id)} className={confirmingId === u.id ? "text-red-600 font-bold" : "text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400"}>{confirmingId === u.id ? "Sure?" : <Trash2 size={16}/>}</button></>}</td>
+                            <td className="text-right space-x-2">{!SUPER_ADMINS.includes(u.email) && <><button onClick={()=>toggleStatus(u.id, u.isActive)} className={!u.isActive ? "text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 p-1 rounded" : "text-gray-400 dark:text-gray-500"} title={u.isActive ? "Deactivate" : "Approve"}>{u.isActive ? <XCircle size={16}/> : <CheckCircle size={16}/>}</button><button onClick={()=>deleteUser(u.id)} className={confirmingId === u.id ? "text-red-600 dark:text-red-400 font-bold" : "text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"}>{confirmingId === u.id ? "Sure?" : <Trash2 size={16}/>}</button></>}</td>
                         </tr>
                     );
                 })}</tbody></table></div></Card>
@@ -1032,7 +1065,7 @@
                 } catch(err) { setMsg({type:'error', text:err.message}); }
             };
             return (
-                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300':'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2 text-gray-700 dark:text-gray-300"><label className="flex items-center gap-2"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
+                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2"><label className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
             );
         }
 
@@ -1044,7 +1077,7 @@
             const post = async (e) => { e.preventDefault(); try { await addDoc(collection(db, 'news'), {...news, createdAt: serverTimestamp()}); setNews({title:'', content:''}); } catch (e) { console.error(e); } };
             const deleteNews = async (id) => { if (confirmId === id) { await deleteDoc(doc(db, 'news', id)); setConfirmId(null); } else { setConfirmId(id); setTimeout(() => setConfirmId(null), 3000); } };
             return (
-                <div className="space-y-8"><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Post News</h3><form onSubmit={post} className="space-y-4"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Title" value={news.title} onChange={e=>setNews({...news, title:e.target.value})} required /><textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Content" value={news.content} onChange={e=>setNews({...news, content:e.target.value})} required /><Button type="submit">Publish</Button></form></Card><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Manage Updates</h3><div className="space-y-4">{newsList.map(item => (<div key={item.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50 flex justify-between items-start group"><div><h4 className="font-bold text-gray-900 dark:text-white">{item.title}</h4><p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{item.content}</p><div className="text-xs text-gray-400 mt-2">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</div></div><button onClick={() => deleteNews(item.id)} className={`p-2 rounded transition-colors ${confirmId === item.id ? 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Delete">{confirmId === item.id ? <span className="text-xs font-bold">Sure?</span> : <Trash2 size={18} />}</button></div>))}{newsList.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-sm">No updates posted.</p>}</div></Card></div>
+                <div className="space-y-8"><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Post News</h3><form onSubmit={post} className="space-y-4"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Title" value={news.title} onChange={e=>setNews({...news, title:e.target.value})} required /><textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" rows={3} placeholder="Content" value={news.content} onChange={e=>setNews({...news, content:e.target.value})} required /><Button type="submit">Publish</Button></form></Card><Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Manage Updates</h3><div className="space-y-4">{newsList.map(item => (<div key={item.id} className="p-4 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-700/50 flex justify-between items-start group"><div><h4 className="font-bold text-gray-900 dark:text-white">{item.title}</h4><p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{item.content}</p><div className="text-xs text-gray-400 mt-2">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</div></div><button onClick={() => deleteNews(item.id)} className={`p-2 rounded transition-colors ${confirmId === item.id ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Delete">{confirmId === item.id ? <span className="text-xs font-bold">Sure?</span> : <Trash2 size={18} />}</button></div>))}{newsList.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-sm">No updates posted.</p>}</div></Card></div>
             );
         }
 
@@ -1055,7 +1088,7 @@
             const handleClick = (id) => { if (confirmingId === id) { approvePayment(id); } else { setConfirmingId(id); setTimeout(() => setConfirmingId(null), 3000); } };
             const approvePayment = async (id) => { try { await updateDoc(doc(db, 'requests', id), { status: 'pending' }); setConfirmingId(null); } catch (e) { console.error(e); } };
             return (
-                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><IndianRupee size={20} className="text-indigo-600 dark:text-indigo-400" /> Payment Approvals</h3><div className="space-y-3">{requests.map(req => (<div key={req.id} className="p-4 border border-indigo-100 dark:border-indigo-900 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/20 flex flex-col md:flex-row justify-between items-center gap-4"><div><div className="font-bold text-gray-900 dark:text-white">{req.serviceName} <span className="text-gray-500 dark:text-gray-400 font-normal">(₹{req.servicePrice || 'N/A'})</span></div><div className="text-sm text-gray-600 dark:text-gray-300">User: {req.userEmail}</div><div className="text-xs text-gray-400 mt-1">To: {req.orgName}</div></div><Button onClick={() => handleClick(req.id)} variant={confirmingId === req.id ? 'danger' : 'success'} className="!py-1.5 !px-4 !text-sm transition-all">{confirmingId === req.id ? 'Confirm Approval?' : <><Check size={16} /> Approve Payment</>}</Button></div>))}{requests.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-center py-4">No pending payments.</p>}</div></Card>
+                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><IndianRupee size={20} className="text-indigo-600 dark:text-indigo-400" /> Payment Approvals</h3><div className="space-y-3">{requests.map(req => (<div key={req.id} className="p-4 border border-indigo-100 dark:border-indigo-900 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/10 flex flex-col md:flex-row justify-between items-center gap-4"><div><div className="font-bold text-gray-900 dark:text-white">{req.serviceName} <span className="text-gray-500 dark:text-gray-400 font-normal">(₹{req.servicePrice || 'N/A'})</span></div><div className="text-sm text-gray-600 dark:text-gray-300">User: {req.userEmail}</div><div className="text-xs text-gray-400 mt-1">To: {req.orgName}</div></div><Button onClick={() => handleClick(req.id)} variant={confirmingId === req.id ? 'danger' : 'success'} className="!py-1.5 !px-4 !text-sm transition-all">{confirmingId === req.id ? 'Confirm Approval?' : <><Check size={16} /> Approve Payment</>}</Button></div>))}{requests.length === 0 && <p className="text-gray-500 dark:text-gray-400 text-center py-4">No pending payments.</p>}</div></Card>
             );
         }
 
@@ -1076,8 +1109,8 @@
             };
 
             return (
-                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><AlertTriangle size={20} className="text-amber-600 dark:text-amber-500" /> Grievance Portal</h3><div className="space-y-4">{grievances.map(g => (
-                    <div key={g.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-700/30">
+                <Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><AlertTriangle size={20} className="text-amber-600 dark:text-amber-400" /> Grievance Portal</h3><div className="space-y-4">{grievances.map(g => (
+                    <div key={g.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                         <div className="flex justify-between items-start">
                             <div>
                                 <div className="font-bold text-lg text-gray-900 dark:text-white">{g.subject} <Badge color={g.status==='resolved'?'green':'red'}>{g.status}</Badge></div>
@@ -1105,7 +1138,7 @@
                 return () => unsub();
             }, []);
             return (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]"><Card className="col-span-1 flex flex-col h-full"><div className="p-4 border-b border-gray-200 dark:border-gray-700"><h3 className="font-bold text-gray-900 dark:text-white">Conversations</h3></div><div className="overflow-y-auto flex-1 p-2 space-y-2">{chats.map(chat => (<div key={chat.id} onClick={() => setSelectedChat(chat)} className={`p-3 rounded-lg cursor-pointer border transition-all ${selectedChat?.id === chat.id ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'}`}><div className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{Object.values(chat.participantData || {}).map(p => p.name).join(' & ')}</div><div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{chat.lastMessage || 'No messages'}</div><div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 text-right">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</div></div>))}{chats.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">No chats found</div>}</div></Card><Card className="col-span-1 lg:col-span-2 flex flex-col h-full overflow-hidden">{selectedChat ? (<AdminChatDetails chat={selectedChat} />) : (<div className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-700/20">Select a conversation to monitor</div>)}</Card></div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]"><Card className="col-span-1 flex flex-col h-full"><div className="p-4 border-b border-gray-100 dark:border-gray-700"><h3 className="font-bold text-gray-900 dark:text-white">Conversations</h3></div><div className="overflow-y-auto flex-1 p-2 space-y-2">{chats.map(chat => (<div key={chat.id} onClick={() => setSelectedChat(chat)} className={`p-3 rounded-lg cursor-pointer border transition-all ${selectedChat?.id === chat.id ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent'}`}><div className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{Object.values(chat.participantData || {}).map(p => p.name).join(' & ')}</div><div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{chat.lastMessage || 'No messages'}</div><div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 text-right">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</div></div>))}{chats.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">No chats found</div>}</div></Card><Card className="col-span-1 lg:col-span-2 flex flex-col h-full overflow-hidden">{selectedChat ? (<AdminChatDetails chat={selectedChat} />) : (<div className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-800/50">Select a conversation to monitor</div>)}</Card></div>
             );
         }
 
@@ -1121,7 +1154,7 @@
                 return () => unsub();
             }, [chat.id]);
             return (
-                <div className="flex flex-col h-full"><div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"><h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-gray-800">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{senderName}</span><span className="text-[10px] text-gray-400 dark:text-gray-500">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-sm text-gray-800 dark:text-gray-200">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
+                <div className="flex flex-col h-full"><div className="p-4 border-b bg-gray-50 dark:bg-gray-700/50 dark:border-gray-700"><h4 className="font-bold text-gray-800 dark:text-white text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-gray-800">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{senderName}</span><span className="text-[10px] text-gray-400">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-sm text-gray-800 dark:text-gray-200">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
             );
         }
 
@@ -1204,29 +1237,29 @@
 
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
+                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
                     <div className="lg:col-span-3">
                         {tab === 'profile' && (
                             <div className="space-y-6">
                                 <Card className="p-6">
                                     <div className="flex justify-between mb-6"><h2 className="text-xl font-bold text-gray-900 dark:text-white">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
-                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">About</label>{isEditing ? <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded text-gray-700 dark:text-gray-300">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
+                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">About</label>{isEditing ? <textarea className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded text-gray-700 dark:text-gray-300">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700"><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
                                 </Card>
                                 <Card className="p-6">
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Settings size={20} /> Account Settings</h3>
                                     <form onSubmit={handleUpdateOrgInfo} className="space-y-4 max-w-md">
-                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300':'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{profileMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Organization Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`}>{profileMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Organization Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
                                         <Button type="submit">Update Info</Button>
                                     </form>
                                 </Card>
                                 <Card className="p-6">
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3>
                                     <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
-                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{passMsg.text}</div>}
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
+                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{passMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
                                         <Button type="submit">Update Password</Button>
                                     </form>
                                 </Card>
@@ -1237,10 +1270,9 @@
                                 <h3 className="font-bold mb-4 text-gray-900 dark:text-white">Requests</h3>
                                 <div className="space-y-3">
                                     {requests.map(r => (
-                                        <div key={r.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-700/30 flex justify-between items-center">
+                                        <div key={r.id} className="p-4 border dark:border-gray-700 rounded bg-white dark:bg-gray-700/50 flex justify-between items-center">
                                             <div>
                                                 <div className="font-bold text-gray-900 dark:text-white">{r.serviceName} {r.servicePrice && <span className="text-gray-500 dark:text-gray-400 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
-                                                {/* HIDE EMAIL: Display Name instead */}
                                                 <div className="text-sm text-gray-500 dark:text-gray-400">{r.userName || "User"}</div>
                                                 <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
                                             </div>
@@ -1290,14 +1322,13 @@
                 return () => unsub();
             }, [user.uid]);
             
-            // HIDE EMAIL: Display Name or "User"
             const getPartnerName = (chat) => { 
                 const partnerId = chat.participants.find(p => p !== user.uid); 
                 const pData = chat.participantData?.[partnerId];
                 return pData?.name || "User"; 
             };
             
-            return (<Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900 dark:text-white">{getPartnerName(chat)}</span><span className="text-xs text-gray-400 dark:text-gray-500">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">No active conversations.</p>}</div></Card>);
+            return (<Card className="p-6"><h3 className="font-bold mb-4 text-gray-900 dark:text-white">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900 dark:text-white">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">No active conversations.</p>}</div></Card>);
         }
 
         // --- USER DASHBOARD ---
@@ -1313,7 +1344,6 @@
             useEffect(() => { const unsubOrgs = onSnapshot(query(collection(db, 'users'), where('role', '==', 'organization'), where('isActive', '==', true)), s => setOrgs(s.docs.map(d => ({ id: d.id, ...d.data() })))); const unsubReq = onSnapshot(query(collection(db, 'requests'), where('userId', '==', user.uid)), s => setMyRequests(s.docs.map(d => ({ id: d.id, ...d.data() })))); return () => { unsubOrgs(); unsubReq(); }; }, [user.uid]);
             const initiateRequest = (org, serviceObj) => { setPaymentModalData({ org, serviceName: typeof serviceObj === 'string' ? serviceObj : serviceObj.name, servicePrice: typeof serviceObj === 'object' && serviceObj.price ? serviceObj.price : null }); };
             
-            // HIDE EMAIL: Store userName instead of just email for Org visibility
             const confirmPayment = async () => { if (!paymentModalData) return; try { await addDoc(collection(db, 'requests'), { userId: user.uid, userEmail: user.email, userName: userData.displayName || 'User', orgId: paymentModalData.org.id, orgName: paymentModalData.org.displayName, serviceName: paymentModalData.serviceName, servicePrice: paymentModalData.servicePrice, status: 'payment_review', createdAt: serverTimestamp() }); setPaymentModalData(null); } catch (e) { } };
             
             const cancelRequest = async (id) => {
@@ -1336,7 +1366,6 @@
                 else { 
                     const newChatRef = await addDoc(collection(db, 'chats'), { 
                         participants: [user.uid, org.id], 
-                        // HIDE EMAIL: Store minimal data if possible, but keeping email in DB is fine as long as UI doesn't show it.
                         participantData: { [user.uid]: { name: user.displayName || 'User', email: user.email }, [org.id]: { name: org.displayName, email: org.email } }, 
                         createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() 
                     }); 
@@ -1347,14 +1376,14 @@
 
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
+                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 dark:text-white mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
                     <div className="lg:col-span-3">
-                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{org.displayName}</h3><p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700/50 hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:text-white text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
+                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{org.displayName}</h3><p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
                         {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 dark:text-white mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
-                            <div key={r.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded text-sm flex justify-between items-center">
+                            <div key={r.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-700 text-sm flex justify-between items-center">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-indigo-900 dark:text-indigo-200">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
+                                        <span className="font-bold text-indigo-900 dark:text-indigo-300">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
                                         <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status === 'payment_review' ? 'Payment Review' : r.status}</Badge>
                                     </div>
                                     <div className="text-gray-600 dark:text-gray-400 text-xs">{r.orgName}</div>
@@ -1373,17 +1402,15 @@
                         {tab === 'grievances' && <CommonGrievanceList user={user} role="user" />}
                     </div>
                     {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
-                    {paymentModalData && (<div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"><div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border dark:border-gray-700"><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Payment</h3><p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600 dark:text-indigo-400">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 dark:text-gray-400 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 dark:text-gray-200 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 dark:text-indigo-400 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
+                    {paymentModalData && (<div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4"><div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border dark:border-gray-700"><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Payment</h3><p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600 dark:text-indigo-400">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 dark:text-gray-400 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 dark:text-gray-200 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 dark:text-indigo-400 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
                 </div>
             );
         }
 
         function UserProfile({ user, userData }) {
-            // Password State
             const [pass, setPass] = useState('');
             const [confirm, setConfirm] = useState('');
             const [msg, setMsg] = useState({ type: '', text: '' });
-            // Profile Info State
             const [profileName, setProfileName] = useState(userData?.displayName || '');
             const [profileEmail, setProfileEmail] = useState(user.email || '');
             const [infoMsg, setInfoMsg] = useState({ type: '', text: '' });
@@ -1399,12 +1426,10 @@
                 e.preventDefault();
                 setInfoMsg({type:'', text:''});
                 try {
-                    // Update Name
                     if(profileName !== userData.displayName) {
                         await updateProfile(user, { displayName: profileName });
                         await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
                     }
-                    // Update Email
                     if(profileEmail !== user.email) {
                         await updateEmail(user, profileEmail);
                         await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
@@ -1426,14 +1451,14 @@
                     <Card className="p-6">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600 dark:text-indigo-400" /> Account Details</h3>
                         <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
-                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{infoMsg.text}</div>}
-                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
+                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                            <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Address</label><input className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded outline-none focus:ring-2 focus:ring-indigo-500" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
                             <div><label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
                             <Button type="submit">Update Info</Button>
                         </form>
                     </Card>
-                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
+                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600 dark:text-indigo-400" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
                 </div>
             );
         }

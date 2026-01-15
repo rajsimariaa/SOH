@@ -622,11 +622,17 @@
                 if(!confirm(`Confirm order for ${product.name} (₹${product.price})?`)) return;
                 
                 try {
+                    // Fetch seller details to get UPI ID
+                    const sellerSnap = await getDoc(doc(db, 'users', product.sellerId));
+                    const sellerData = sellerSnap.exists() ? sellerSnap.data() : {};
+                    const sellerUpiId = sellerData.upiId || '';
+
                     await addDoc(collection(db, 'orders'), {
                         productId: product.id,
                         productName: product.name,
                         price: product.price,
                         sellerId: product.sellerId,
+                        sellerUpiId: sellerUpiId, // Store snapshot of UPI ID at time of order
                         buyerId: user.uid,
                         buyerEmail: user.email,
                         status: 'pending',
@@ -669,10 +675,15 @@
             );
         }
 
-        function SellerDashboard({ user }) {
+        function SellerDashboard({ user, userData }) {
             const [products, setProducts] = useState([]);
             const [orders, setOrders] = useState([]);
             const [newProd, setNewProd] = useState({ name: '', price: '', description: '' });
+            const [upiId, setUpiId] = useState(userData?.upiId || '');
+
+            useEffect(() => {
+                if (userData?.upiId) setUpiId(userData.upiId);
+            }, [userData]);
 
             useEffect(() => {
                 // Fetch My Products
@@ -685,6 +696,17 @@
 
                 return () => { unsubP(); unsubO(); };
             }, [user.uid]);
+
+            const saveSettings = async (e) => {
+                e.preventDefault();
+                try {
+                    await updateDoc(doc(db, 'users', user.uid), { upiId });
+                    alert("Payment settings saved!");
+                } catch (e) {
+                    console.error(e);
+                    alert("Error saving settings.");
+                }
+            };
 
             const addProduct = async (e) => {
                 e.preventDefault();
@@ -708,8 +730,24 @@
 
             return (
                 <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Add Product Form */}
+                    {/* Settings & Add Product */}
                     <div className="lg:col-span-1 space-y-6">
+                        <Card className="p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Payment Settings</h3>
+                            <form onSubmit={saveSettings} className="space-y-4">
+                                <div>
+                                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Your UPI ID (shown to buyers)</label>
+                                    <input 
+                                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                                        placeholder="e.g. name@upi" 
+                                        value={upiId} 
+                                        onChange={e=>setUpiId(e.target.value)} 
+                                    />
+                                </div>
+                                <Button type="submit" variant="secondary" className="w-full">Save Settings</Button>
+                            </form>
+                        </Card>
+
                         <Card className="p-6">
                             <h3 className="font-bold text-gray-900 dark:text-white mb-4">Add Product</h3>
                             <form onSubmit={addProduct} className="space-y-4">
@@ -1332,6 +1370,159 @@
             }, [chat.id]);
             return (
                 <div className="flex flex-col h-full"><div className="p-4 border-b bg-gray-50 dark:bg-gray-700/50 dark:border-gray-700"><h4 className="font-bold text-gray-800 dark:text-white text-sm">{Object.values(chat.participantData || {}).map(p => `${p.name}`).join(' ↔ ')}</h4></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-gray-800">{messages.map(m => { const sender = chat.participantData?.[m.senderId]; const senderName = sender ? sender.name : m.senderEmail; return (<div key={m.id} className="flex flex-col"><div className="flex justify-between items-end mb-1"><span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{senderName}</span><span className="text-[10px] text-gray-400">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString() : ''}</span></div><div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none text-sm text-gray-800 dark:text-gray-200">{m.text}</div></div>); })}<div ref={bottomRef} /></div></div>
+            );
+        }
+
+        function OrgDashboard({ user, userData }) {
+            const [activeTab, setActiveTab] = useState('services');
+            return (
+                <div className="space-y-6">
+                    <Card className="p-6">
+                        <div className="flex justify-between items-center mb-6"><div className="flex items-center gap-4"><div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400"><Building2 size={32} /></div><div><h2 className="text-2xl font-bold text-gray-900 dark:text-white">{userData?.displayName || 'Organization'}</h2><p className="text-gray-500 dark:text-gray-400">{userData?.email}</p></div></div><div className="flex gap-2"><Button onClick={() => setActiveTab('services')} variant={activeTab === 'services' ? 'primary' : 'secondary'} className="!py-1.5">Services</Button><Button onClick={() => setActiveTab('requests')} variant={activeTab === 'requests' ? 'primary' : 'secondary'} className="!py-1.5">Requests</Button><Button onClick={() => setActiveTab('grievances')} variant={activeTab === 'grievances' ? 'primary' : 'secondary'} className="!py-1.5">Support</Button></div></div>
+                        {activeTab === 'services' && <OrgServices user={user} />}
+                        {activeTab === 'requests' && <OrgRequests user={user} />}
+                        {activeTab === 'grievances' && <CommonGrievanceList user={user} role="organization" />}
+                    </Card>
+                </div>
+            );
+        }
+
+        function OrgServices({ user }) {
+            const [services, setServices] = useState([]);
+            const [newService, setNewService] = useState({ name: '', description: '', price: '' });
+            useEffect(() => { const q = query(collection(db, 'services'), where('orgId', '==', user.uid)); const unsub = onSnapshot(q, (s) => setServices(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, [user.uid]);
+            const addService = async (e) => { e.preventDefault(); await addDoc(collection(db, 'services'), { ...newService, orgId: user.uid, orgName: user.displayName || user.email, createdAt: serverTimestamp() }); setNewService({ name: '', description: '', price: '' }); };
+            const deleteService = async (id) => { if(confirm('Delete service?')) await deleteDoc(doc(db, 'services', id)); };
+            return (
+                <div className="space-y-6"><h3 className="font-bold text-lg text-gray-900 dark:text-white">Manage Services</h3><form onSubmit={addService} className="grid md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700"><input className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Service Name" value={newService.name} onChange={e=>setNewService({...newService, name:e.target.value})} required /><input className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white md:col-span-2" placeholder="Description" value={newService.description} onChange={e=>setNewService({...newService, description:e.target.value})} required /><input type="number" className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Price (₹)" value={newService.price} onChange={e=>setNewService({...newService, price:e.target.value})} required /><Button type="submit" className="md:col-span-4">Add Service</Button></form><div className="grid md:grid-cols-2 gap-4">{services.map(s => (<div key={s.id} className="p-4 border dark:border-gray-700 rounded-lg flex justify-between items-start bg-white dark:bg-gray-800"><div><h4 className="font-bold text-gray-900 dark:text-white">{s.name}</h4><p className="text-sm text-gray-600 dark:text-gray-300 my-1">{s.description}</p><p className="font-bold text-indigo-600 dark:text-indigo-400">₹{s.price}</p></div><button onClick={()=>deleteService(s.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18}/></button></div>))}</div></div>
+            );
+        }
+
+        function OrgRequests({ user }) {
+            const [requests, setRequests] = useState([]);
+            useEffect(() => { const q = query(collection(db, 'requests'), where('orgId', '==', user.uid)); const unsub = onSnapshot(q, (s) => setRequests(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, [user.uid]);
+            const updateStatus = async (id, status) => { await updateDoc(doc(db, 'requests', id), { status }); };
+            return (
+                <div className="space-y-4"><h3 className="font-bold text-lg text-gray-900 dark:text-white">Incoming Requests</h3>{requests.map(r => (<div key={r.id} className="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30"><div className="flex justify-between mb-2"><span className="font-bold text-gray-900 dark:text-white">{r.serviceName}</span><Badge color={r.status==='completed'?'green':r.status==='pending'?'yellow':'blue'}>{r.status}</Badge></div><p className="text-sm text-gray-600 dark:text-gray-300 mb-3">User: {r.userEmail}<br/>Date: {r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : 'N/A'}</p><div className="flex gap-2">{r.status==='pending' && (<><Button onClick={()=>updateStatus(r.id, 'accepted')} variant="success" className="!py-1 !text-xs">Accept</Button><Button onClick={()=>updateStatus(r.id, 'declined')} variant="danger" className="!py-1 !text-xs">Decline</Button></>)}{r.status==='accepted' && <Button onClick={()=>updateStatus(r.id, 'in_progress')} className="!py-1 !text-xs">Start Progress</Button>}{r.status==='in_progress' && <Button onClick={()=>updateStatus(r.id, 'payment_review')} className="!py-1 !text-xs">Request Payment Review</Button>}</div></div>))}{requests.length === 0 && <p className="text-gray-500 dark:text-gray-400">No requests yet.</p>}</div>
+            );
+        }
+
+        function UserDashboard({ user, userData }) {
+            const [activeTab, setActiveTab] = useState('browse');
+            return (
+                <div className="grid md:grid-cols-4 gap-6">
+                    <Card className="md:col-span-1 p-6 h-fit"><div className="flex flex-col items-center text-center mb-6"><div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4"><User size={40} /></div><h3 className="font-bold text-lg text-gray-900 dark:text-white">{userData?.displayName}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p></div><div className="space-y-2"><button onClick={()=>setActiveTab('browse')} className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab==='browse'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Browse Services</button><button onClick={()=>setActiveTab('my_requests')} className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab==='my_requests'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>My Requests</button><button onClick={()=>setActiveTab('my_orders')} className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab==='my_orders'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>My Orders</button><button onClick={()=>setActiveTab('chats')} className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab==='chats'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Messages</button><button onClick={()=>setActiveTab('grievances')} className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab==='grievances'?'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300':'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>Support</button></div></Card>
+                    <div className="md:col-span-3">
+                        {activeTab === 'browse' && <UserBrowseServices user={user} />}
+                        {activeTab === 'my_requests' && <UserRequests user={user} />}
+                        {activeTab === 'my_orders' && <UserOrders user={user} />}
+                        {activeTab === 'chats' && <UserChats user={user} />}
+                        {activeTab === 'grievances' && <CommonGrievanceList user={user} role="user" />}
+                    </div>
+                </div>
+            );
+        }
+
+        function UserOrders({ user }) {
+            const [orders, setOrders] = useState([]);
+            useEffect(() => { const q = query(collection(db, 'orders'), where('buyerId', '==', user.uid)); const unsub = onSnapshot(q, s => setOrders(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, [user.uid]);
+            return (
+                <Card className="p-6"><h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">My Orders</h3><div className="space-y-4">{orders.map(o => (
+                    <div key={o.id} className="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-bold text-gray-900 dark:text-white">{o.productName}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Price: ₹{o.price}</p>
+                                {o.sellerUpiId && o.status === 'pending' && (
+                                    <div className="mt-2 p-2 bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 rounded text-sm text-indigo-900 dark:text-indigo-200">
+                                        <p className="text-xs uppercase font-bold opacity-70">Payment Details</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span>UPI:</span>
+                                            <span className="font-mono font-bold select-all bg-white dark:bg-gray-800 px-1 rounded">{o.sellerUpiId}</span>
+                                        </div>
+                                        <p className="text-xs mt-1 opacity-75">Please pay via UPI app and wait for seller confirmation.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Badge color={o.status==='completed'?'green':'yellow'}>{o.status}</Badge>
+                        </div>
+                    </div>
+                ))}{orders.length === 0 && <p className="text-gray-500 dark:text-gray-400">No orders placed.</p>}</div></Card>
+            );
+        }
+
+        function UserBrowseServices({ user }) {
+            const [services, setServices] = useState([]);
+            useEffect(() => { const q = query(collection(db, 'services')); const unsub = onSnapshot(q, s => setServices(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, []);
+            const requestService = async (s) => {
+                if(confirm(`Request ${s.name} from ${s.orgName}?`)) {
+                    await addDoc(collection(db, 'requests'), {
+                        userId: user.uid, userEmail: user.email, userName: user.displayName||'User',
+                        orgId: s.orgId, orgName: s.orgName,
+                        serviceId: s.id, serviceName: s.name, servicePrice: s.price,
+                        status: 'pending', createdAt: serverTimestamp()
+                    });
+                    alert("Request sent!");
+                }
+            };
+            const startChat = async (orgId, orgName) => {
+                const chatId = [user.uid, orgId].sort().join('_');
+                const chatRef = doc(db, 'chats', chatId);
+                const chatSnap = await getDoc(chatRef);
+                if (!chatSnap.exists()) {
+                    await setDoc(chatRef, {
+                        participants: [user.uid, orgId],
+                        participantData: {
+                            [user.uid]: { name: user.displayName || user.email, email: user.email },
+                            [orgId]: { name: orgName, email: "Org" } 
+                        },
+                        lastMessage: '', lastMessageTime: serverTimestamp()
+                    });
+                }
+                // In a real app, this would open the chat window directly. 
+                // For this demo, we'll alert the user to go to the Messages tab.
+                alert(`Conversation started with ${orgName}. Please go to the 'Messages' tab to chat.`);
+            };
+
+            return (
+                <Card className="p-6"><h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Available Services</h3><div className="grid md:grid-cols-2 gap-4">{services.map(s => (<div key={s.id} className="p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"><h4 className="font-bold text-gray-900 dark:text-white">{s.name}</h4><p className="text-sm text-gray-500 dark:text-gray-400">{s.orgName}</p><p className="my-2 text-gray-600 dark:text-gray-300 text-sm">{s.description}</p><div className="flex justify-between items-center mt-3"><span className="font-bold text-indigo-600 dark:text-indigo-400">₹{s.price}</span><div className="flex gap-2"><button onClick={()=>startChat(s.orgId, s.orgName)} className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Chat"><MessageCircle size={18}/></button><Button onClick={()=>requestService(s)} className="!py-1 !px-3 !text-xs">Request</Button></div></div></div>))}{services.length===0 && <p className="text-gray-500 dark:text-gray-400 col-span-2 text-center py-8">No services available.</p>}</div></Card>
+            );
+        }
+
+        function UserRequests({ user }) {
+            const [requests, setRequests] = useState([]);
+            useEffect(() => { const q = query(collection(db, 'requests'), where('userId', '==', user.uid)); const unsub = onSnapshot(q, s => setRequests(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, [user.uid]);
+            const cancelRequest = async (id) => { if(confirm("Cancel this request?")) await updateDoc(doc(db, 'requests', id), { status: 'cancelled' }); };
+            return (
+                <Card className="p-6"><h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">My Requests</h3><div className="space-y-4">{requests.map(r => (<div key={r.id} className="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30"><div className="flex justify-between mb-1"><span className="font-bold text-gray-900 dark:text-white">{r.serviceName}</span><Badge color={r.status==='completed'?'green':r.status==='cancelled'?'red':'blue'}>{r.status}</Badge></div><p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Org: {r.orgName}</p>{(r.status==='pending'||r.status==='accepted') && <button onClick={()=>cancelRequest(r.id)} className="text-xs text-red-500 hover:underline">Cancel Request</button>}</div>))}{requests.length===0 && <p className="text-gray-500 dark:text-gray-400">No requests made.</p>}</div></Card>
+            );
+        }
+
+        function UserChats({ user }) {
+            const [chats, setChats] = useState([]);
+            const [activeChat, setActiveChat] = useState(null);
+            useEffect(() => { const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid)); const unsub = onSnapshot(q, s => setChats(s.docs.map(d => ({id:d.id, ...d.data()})))); return () => unsub(); }, [user.uid]);
+            return (
+                <div className="grid md:grid-cols-3 h-[500px] gap-4">
+                    <Card className="md:col-span-1 overflow-y-auto p-2">
+                        <h3 className="font-bold p-2 text-gray-900 dark:text-white">Messages</h3>
+                        {chats.map(c => {
+                            const otherId = c.participants.find(p => p !== user.uid);
+                            const name = c.participantData?.[otherId]?.name || 'Chat';
+                            return (
+                                <div key={c.id} onClick={()=>setActiveChat(c.id)} className={`p-3 rounded cursor-pointer mb-2 transition-colors ${activeChat===c.id ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
+                                    <div className="font-bold text-sm text-gray-900 dark:text-white">{name}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.lastMessage || 'Start chatting...'}</div>
+                                </div>
+                            );
+                        })}
+                        {chats.length===0 && <p className="text-gray-500 dark:text-gray-400 text-sm p-2">No conversations.</p>}
+                    </Card>
+                    <div className="md:col-span-2 h-full relative">
+                        {activeChat && <ChatWindow chatId={activeChat} onClose={()=>setActiveChat(null)} currentUser={user} />}
+                        {!activeChat && <Card className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border-dashed">Select a conversation</Card>}
+                    </div>
+                </div>
             );
         }
 

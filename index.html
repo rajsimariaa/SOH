@@ -91,7 +91,8 @@
             orderBy,
             limit
         } from 'firebase/firestore';
-        import { initializeApp } from 'firebase/app';
+        // ADDED deleteApp here
+        import { initializeApp, deleteApp } from 'firebase/app';
         import { 
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
@@ -1302,10 +1303,16 @@
             const [msg, setMsg] = useState({type:'', text:''});
             const handleCreate = async (e) => {
                 e.preventDefault(); setMsg({type:'info', text:'Creating...'});
+                let secondaryApp;
                 try {
-                    const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+                    // Create a unique app instance name to prevent "App already exists" errors
+                    secondaryApp = initializeApp(firebaseConfig, `Secondary-${Date.now()}`);
                     const secAuth = getAuth(secondaryApp);
+                    
                     const cred = await createUserWithEmailAndPassword(secAuth, form.email, form.password);
+                    
+                    // Note: setDoc uses the PRIMARY app's db instance (authenticated as Admin)
+                    // The Rules update below allows this because the authenticated user is an Admin
                     await setDoc(doc(db, 'users', cred.user.uid), { 
                         uid: cred.user.uid, 
                         email: form.email, 
@@ -1316,9 +1323,18 @@
                         lastSeen: serverTimestamp(),
                         ...(form.role==='organization'?{description:'New Org', services:[]}:{}) 
                     });
-                    await signOut(secAuth); // Sign out secondary
-                    setMsg({type:'success', text:'Created!'}); setForm({email:'', password:'', name:'', role:'organization'});
-                } catch(err) { setMsg({type:'error', text:err.message}); }
+                    
+                    await signOut(secAuth);
+                    setMsg({type:'success', text:'Account created successfully!'}); 
+                    setForm({email:'', password:'', name:'', role:'organization'});
+                } catch(err) { 
+                    setMsg({type:'error', text:err.message}); 
+                } finally {
+                    // Clean up the secondary app instance
+                    if (secondaryApp) {
+                        try { await deleteApp(secondaryApp); } catch (e) { console.error("Cleanup error", e); }
+                    }
+                }
             };
             return (
                 <Card className="p-8 max-w-xl mx-auto">

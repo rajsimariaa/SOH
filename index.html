@@ -251,6 +251,63 @@
             );
         }
 
+        // --- ORDER MODAL (NEW) ---
+        function OrderModal({ product, onClose, onConfirm }) {
+            const [address, setAddress] = useState('');
+            const [sellerUpi, setSellerUpi] = useState('Loading...');
+
+            useEffect(() => {
+                const fetchSeller = async () => {
+                    try {
+                        const snap = await getDoc(doc(db, 'users', product.sellerId));
+                        if(snap.exists()) setSellerUpi(snap.data().upiId || 'Not provided');
+                        else setSellerUpi('Not found');
+                    } catch(e) { setSellerUpi('Error fetching'); }
+                };
+                fetchSeller();
+            }, [product.sellerId]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if(!address.trim()) return alert("Please enter delivery address");
+                onConfirm(address, sellerUpi);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold dark:text-white">Complete Order</h3>
+                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"><X size={20}/></button>
+                        </div>
+                        <div className="mb-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                            <p><span className="font-bold">Item:</span> {product.name}</p>
+                            <p><span className="font-bold">Price:</span> ₹{product.price}</p>
+                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-100 dark:border-indigo-800">
+                                <p className="text-xs uppercase font-bold text-indigo-800 dark:text-indigo-300 mb-1">Seller UPI ID</p>
+                                <p className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 select-all">{sellerUpi}</p>
+                                <p className="text-[10px] mt-1 text-gray-500 dark:text-gray-400">Scan or copy to pay via UPI app.</p>
+                            </div>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <label className="block text-sm font-medium mb-1 dark:text-gray-300">Delivery Address</label>
+                            <textarea 
+                                className="w-full p-2 border rounded mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                rows={3} 
+                                placeholder="Street, City, Pincode..." 
+                                value={address} 
+                                onChange={e=>setAddress(e.target.value)} 
+                                required 
+                            />
+                            <div className="flex gap-2">
+                                <Button type="submit" className="flex-1">Confirm & Order</Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
         // --- DONATION MODAL ---
         function DonationModal({ onClose }) {
             const [name, setName] = useState('');
@@ -610,6 +667,7 @@
 
         function Store({ user }) {
             const [products, setProducts] = useState([]);
+            const [selectedProduct, setSelectedProduct] = useState(null);
             
             useEffect(() => {
                 const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
@@ -617,28 +675,28 @@
                 return () => unsub();
             }, []);
 
-            const handleBuy = async (product) => {
+            const handleBuy = (product) => {
                 if(!user) { alert("Please login to buy products."); return; }
-                if(!confirm(`Confirm order for ${product.name} (₹${product.price})?`)) return;
-                
-                try {
-                    // Fetch seller details to get UPI ID
-                    const sellerSnap = await getDoc(doc(db, 'users', product.sellerId));
-                    const sellerData = sellerSnap.exists() ? sellerSnap.data() : {};
-                    const sellerUpiId = sellerData.upiId || '';
+                setSelectedProduct(product);
+            };
 
+            const confirmOrder = async (address, sellerUpi) => {
+                if(!selectedProduct) return;
+                try {
                     await addDoc(collection(db, 'orders'), {
-                        productId: product.id,
-                        productName: product.name,
-                        price: product.price,
-                        sellerId: product.sellerId,
-                        sellerUpiId: sellerUpiId, // Store snapshot of UPI ID at time of order
+                        productId: selectedProduct.id,
+                        productName: selectedProduct.name,
+                        price: selectedProduct.price,
+                        sellerId: selectedProduct.sellerId,
+                        sellerUpiId: sellerUpi, // Store snapshot of UPI ID at time of order
                         buyerId: user.uid,
                         buyerEmail: user.email,
+                        address: address, // Store buyer address
                         status: 'pending',
                         createdAt: serverTimestamp()
                     });
                     alert("Order placed successfully!");
+                    setSelectedProduct(null);
                 } catch(e) {
                     console.error(e);
                     alert("Failed to place order.");
@@ -647,6 +705,8 @@
 
             return (
                 <div className="space-y-8">
+                    {selectedProduct && <OrderModal product={selectedProduct} onClose={()=>setSelectedProduct(null)} onConfirm={confirmOrder} />}
+                    
                     <div className="text-center space-y-2">
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Community Store</h2>
                         <p className="text-gray-600 dark:text-gray-400">Support local creators and small businesses.</p>
@@ -787,8 +847,9 @@
                                             <Badge color={o.status === 'completed' ? 'green' : 'yellow'}>{o.status}</Badge>
                                         </div>
                                         <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                                            Buyer: {o.buyerEmail}<br/>
-                                            Amount: ₹{o.price}
+                                            <div><span className="font-bold">Buyer:</span> {o.buyerEmail}</div>
+                                            <div><span className="font-bold">Amount:</span> ₹{o.price}</div>
+                                            <div><span className="font-bold">Address:</span> {o.address}</div>
                                         </div>
                                         {o.status === 'pending' && (
                                             <div className="flex gap-2">

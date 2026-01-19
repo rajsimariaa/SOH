@@ -1070,8 +1070,20 @@
             }, [user.uid]);
 
             const saveProfile = async () => { await updateDoc(doc(db, 'users', user.uid), { description: data.desc, services: data.services }); setIsEditing(false); };
+            
+            // Logic for Accept/Decline buttons (requires confirmation)
             const handleReq = (id, status) => { const actionId = `${id}-${status}`; if (confirmingReqId === actionId) { confirmHandleReq(id, status); } else { setConfirmingReqId(actionId); setTimeout(() => setConfirmingReqId(null), 3000); } };
             const confirmHandleReq = async (id, status) => { await updateDoc(doc(db, 'requests', id), { status }); setConfirmingReqId(null); };
+
+            // Logic for Dropdown Status Change (Immediate update)
+            const handleStatusChange = async (id, newStatus) => {
+                try {
+                    await updateDoc(doc(db, 'requests', id), { status: newStatus });
+                } catch (e) {
+                    console.error("Error updating status:", e);
+                }
+            };
+
             const handleAddService = () => { if(data.newServiceName) { const newServiceObj = { name: data.newServiceName, price: data.newServicePrice, description: data.newServiceDesc }; setData({ ...data, services: [...data.services, newServiceObj], newServiceName: '', newServicePrice: '', newServiceDesc: '' }); } };
 
             const handleUpdateOrgInfo = async (e) => {
@@ -1164,7 +1176,7 @@
                                                 )}
                                                 {['accepted', 'in_progress', 'completed'].includes(r.status) && (
                                                     <div className="mt-2 md:mt-0">
-                                                        <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                                                        <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                                                             <option value="accepted">Not Started</option>
                                                             <option value="in_progress">In Progress</option>
                                                             <option value="completed">Completed</option>

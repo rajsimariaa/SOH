@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-adsense-account" content="ca-pub-6603110789295505">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6603110789295505"
+    <meta name="google-adsense-account" content="ca-pub-5610359497866484">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5610359497866484"
      crossorigin="anonymous"></script>
     <title>Shades of Hue</title>
     
@@ -50,7 +50,8 @@
             signOut,
             updatePassword,
             updateEmail,
-            updateProfile
+            updateProfile,
+            sendEmailVerification // Imported for email verification
         } from 'firebase/auth';
         import { 
             getFirestore, 
@@ -58,7 +59,7 @@
             query, 
             where, 
             getDocs, 
-            getDoc,
+            getDoc, 
             doc, 
             setDoc, 
             updateDoc, 
@@ -74,7 +75,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users // Added icons for services
+            BookOpen, Users, Mail
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -217,9 +218,15 @@
             const [userData, setUserData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [view, setView] = useState('home'); 
+            const [isDeactivated, setIsDeactivated] = useState(false);
+            const [isUnverified, setIsUnverified] = useState(false); // New state for email verification
 
             useEffect(() => {
                 const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                    // Reset blocking states on auth change
+                    setIsDeactivated(false);
+                    setIsUnverified(false);
+
                     if (user) {
                         setCurrentUser(user);
                         try {
@@ -231,19 +238,32 @@
                             const userDocSnap = await getDoc(doc(db, 'users', user.uid));
                             if (userDocSnap.exists()) {
                                 const data = userDocSnap.data();
-                                // Admin Deactivation Check
+                                
+                                // 1. Admin Deactivation Check
                                 if (!data.isActive) {
-                                    alert("Your account has been deactivated by an admin. Please contact support.");
+                                    setIsDeactivated(true);
                                     await signOut(auth);
                                     setCurrentUser(null);
                                     setUserRole(null);
                                     setView('home');
+                                    setLoading(false);
+                                    return;
+                                } 
+                                
+                                // 2. Email Verification Check (Only for 'user' role)
+                                if (data.role === 'user' && !user.emailVerified) {
+                                    setIsUnverified(true);
+                                    // We don't sign them out, we just show the unverified screen
+                                    setUserData(data);
+                                    setUserRole(data.role);
                                 } else {
                                     setUserData(data);
                                     setUserRole(data.role);
                                 }
                             } else {
                                 setUserRole('user'); 
+                                // Fallback for users without doc (shouldn't happen with new flow)
+                                if (!user.emailVerified) setIsUnverified(true);
                             }
                         } catch (error) {
                             console.error("Error fetching user data:", error);
@@ -287,6 +307,45 @@
             const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
 
             if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+
+            if (isDeactivated) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+                            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Deactivated</h2>
+                            <p className="text-gray-600 mb-6">Your account has been deactivated by an administrator. Please contact support for assistance.</p>
+                            <Button onClick={() => setIsDeactivated(false)}>Back to Home</Button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // New Unverified Screen
+            if (isUnverified) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+                            <Mail className="w-16 h-16 text-indigo-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
+                            <p className="text-gray-600 mb-6">
+                                Thanks for joining Shades of Hue! We've sent a verification link to <strong>{currentUser?.email}</strong>. 
+                                Please verify your email to access your dashboard.
+                            </p>
+                            <div className="space-y-3">
+                                <Button className="w-full" onClick={() => window.location.reload()}>I've Verified My Email</Button>
+                                <Button variant="secondary" className="w-full" onClick={async () => {
+                                    try {
+                                        await sendEmailVerification(currentUser);
+                                        alert("Verification email resent!");
+                                    } catch(e) { alert("Error: " + e.message); }
+                                }}>Resend Verification Email</Button>
+                                <button onClick={handleSignOut} className="text-gray-400 hover:text-gray-600 text-sm underline">Sign Out</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
@@ -439,6 +498,7 @@
             const [grievances, setGrievances] = useState([]);
             const [subject, setSubject] = useState('');
             const [description, setDescription] = useState('');
+            const [msg, setMsg] = useState('');
             
             useEffect(() => {
                 const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
@@ -458,13 +518,16 @@
                     status: 'pending',
                     createdAt: serverTimestamp()
                 });
-                setSubject(''); setDescription(''); alert("Grievance submitted.");
+                setSubject(''); setDescription(''); 
+                setMsg("Grievance submitted successfully.");
+                setTimeout(() => setMsg(''), 3000);
             };
 
             return (
                 <div className="space-y-6">
                     <Card className="p-6">
                         <h3 className="font-bold mb-4">Submit Grievance</h3>
+                        {msg && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">{msg}</div>}
                         <form onSubmit={submitGrievance} className="space-y-4">
                             <input className="w-full p-2 border rounded" placeholder="Subject" value={subject} onChange={e=>setSubject(e.target.value)} required />
                             <textarea className="w-full p-2 border rounded" rows={3} placeholder="Describe your issue..." value={description} onChange={e=>setDescription(e.target.value)} required />
@@ -607,6 +670,10 @@
                         createdAt: serverTimestamp(),
                         lastSeen: serverTimestamp() // Set initial lastSeen
                     }); 
+
+                    // Send verification email immediately for new users
+                    await sendEmailVerification(userCredential.user);
+                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard.");
 
                     onNavigate('home'); 
                 } catch (err) { 

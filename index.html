@@ -742,7 +742,7 @@
 
                     // Send verification email immediately for new users
                     await sendEmailVerification(userCredential.user);
-                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard.");
+                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard. Please check your Spam Messages.");
 
                     onNavigate('home'); 
                 } catch (err) { 

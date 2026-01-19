@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-adsense-account" content="ca-pub-5610359497866484">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5610359497866484"
+    <meta name="google-adsense-account" content="ca-pub-6603110789295505">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6603110789295505"
      crossorigin="anonymous"></script>
     <title>Shades of Hue</title>
     
@@ -75,7 +75,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Mail
+            BookOpen, Users, Mail, Star, ThumbsUp // Added Star icon
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -134,6 +134,14 @@
             };
             return <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
         };
+
+        const StarRating = ({ rating }) => (
+            <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={14} fill={i < rating ? "currentColor" : "none"} className={i < rating ? "text-yellow-400" : "text-gray-300"} />
+                ))}
+            </div>
+        );
 
         // --- TERMS MODAL ---
         function TermsModal({ onClose }) {
@@ -206,6 +214,67 @@
                         <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
                             <Button onClick={onClose}>Close</Button>
                         </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- FEEDBACK MODAL ---
+        function FeedbackModal({ onClose, onSubmit }) {
+            const [rating, setRating] = useState(0);
+            const [comment, setComment] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (rating === 0) {
+                    alert("Please select a rating!");
+                    return;
+                }
+                onSubmit({ rating, comment });
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                        <div className="text-center mb-6">
+                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-3">
+                                <Star size={24} fill="currentColor" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">Rate Your Experience</h3>
+                            <p className="text-gray-500 text-sm mt-1">How was the service provided?</p>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="flex justify-center gap-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setRating(star)}
+                                        className="focus:outline-none transition-transform hover:scale-110"
+                                    >
+                                        <Star 
+                                            size={32} 
+                                            fill={star <= rating ? "#FACC15" : "none"} 
+                                            className={star <= rating ? "text-yellow-400" : "text-gray-300"} 
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <textarea
+                                className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                rows={4}
+                                placeholder="Share your feedback (optional)..."
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                            />
+
+                            <div className="flex gap-3">
+                                <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+                                <Button type="submit" className="flex-1">Submit Feedback</Button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             );
@@ -727,10 +796,12 @@
                             <SidebarBtn icon={IndianRupee} label="Payment Approvals" active={activeTab === 'approvals'} onClick={() => setActiveTab('approvals')} />
                             <SidebarBtn icon={AlertTriangle} label="Grievance Portal" active={activeTab === 'grievances'} onClick={() => setActiveTab('grievances')} />
                             <SidebarBtn icon={MessageSquare} label="Conversation Monitor" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} />
+                            {/* New Feedback Monitor Tab */}
+                            <SidebarBtn icon={Star} label="Service Feedback" active={activeTab === 'feedback'} onClick={() => setActiveTab('feedback')} />
                         </div></Card>
                     </div>
                     <div className="lg:col-span-3">
-                        {activeTab === 'users' && <AdminUserList />} {activeTab === 'create' && <AdminCreateUser />} {activeTab === 'news' && <AdminNewsManager />} {activeTab === 'approvals' && <AdminPaymentApprovals />} {activeTab === 'grievances' && <AdminGrievances />} {activeTab === 'messages' && <AdminMessageCenter />}
+                        {activeTab === 'users' && <AdminUserList />} {activeTab === 'create' && <AdminCreateUser />} {activeTab === 'news' && <AdminNewsManager />} {activeTab === 'approvals' && <AdminPaymentApprovals />} {activeTab === 'grievances' && <AdminGrievances />} {activeTab === 'messages' && <AdminMessageCenter />} {activeTab === 'feedback' && <AdminFeedbackMonitor />}
                     </div>
                 </div>
             );
@@ -917,6 +988,54 @@
             );
         }
 
+        // New Component: Admin Feedback Monitor
+        function AdminFeedbackMonitor() {
+            const [feedbackList, setFeedbackList] = useState([]);
+            
+            useEffect(() => {
+                const q = query(collection(db, 'requests'), where('status', '==', 'completed'));
+                const unsub = onSnapshot(q, (s) => {
+                    const data = s.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .filter(item => item.feedback) // Only show requests with feedback
+                        .sort((a, b) => (b.feedback?.createdAt?.seconds || 0) - (a.feedback?.createdAt?.seconds || 0));
+                    setFeedbackList(data);
+                });
+                return () => unsub();
+            }, []);
+
+            return (
+                <Card className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Star size={20} className="text-yellow-500" /> Service Feedback Monitor
+                    </h3>
+                    <div className="space-y-4">
+                        {feedbackList.map(item => (
+                            <div key={item.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                                    <div>
+                                        <div className="font-bold text-gray-900 flex items-center gap-2">
+                                            {item.serviceName} 
+                                            <span className="text-gray-400 font-normal text-sm">by {item.orgName}</span>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">User: {item.userName}</div>
+                                        <div className="mt-3">
+                                            <StarRating rating={item.feedback.rating} />
+                                            <p className="mt-2 text-sm text-gray-700 italic">"{item.feedback.comment}"</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                                        {item.feedback.createdAt?.toDate ? item.feedback.createdAt.toDate().toLocaleDateString() : 'Recent'}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {feedbackList.length === 0 && <div className="text-center text-gray-500 py-8">No feedback submitted yet.</div>}
+                    </div>
+                </Card>
+            );
+        }
+
         // --- ORG DASHBOARD ---
         function OrgDashboard({ user, userData }) {
             const [tab, setTab] = useState('profile');
@@ -1029,29 +1148,42 @@
                                 <h3 className="font-bold mb-4">Requests</h3>
                                 <div className="space-y-3">
                                     {requests.map(r => (
-                                        <div key={r.id} className="p-4 border rounded bg-white flex justify-between items-center">
-                                            <div>
-                                                <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
-                                                {/* HIDE EMAIL: Display Name instead */}
-                                                <div className="text-sm text-gray-500">{r.userName || "User"}</div>
-                                                <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
+                                        <div key={r.id} className="p-4 border rounded bg-white flex flex-col gap-3">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
+                                                    {/* HIDE EMAIL: Display Name instead */}
+                                                    <div className="text-sm text-gray-500">{r.userName || "User"}</div>
+                                                    <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
+                                                </div>
+                                                {r.status === 'pending' && (
+                                                    <div className="flex gap-2">
+                                                        <Button onClick={()=>handleReq(r.id, 'accepted')} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
+                                                        <Button onClick={()=>handleReq(r.id, 'declined')} variant={confirmingReqId === `${r.id}-declined` ? 'danger' : 'secondary'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-declined` ? 'Confirm?' : 'Decline'}</Button>
+                                                    </div>
+                                                )}
+                                                {['accepted', 'in_progress', 'completed'].includes(r.status) && (
+                                                    <div className="mt-2 md:mt-0">
+                                                        <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                                                            <option value="accepted">Not Started</option>
+                                                            <option value="in_progress">In Progress</option>
+                                                            <option value="completed">Completed</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                {r.status === 'cancelled' && <span className="text-sm text-gray-500 italic">Cancelled by User</span>}
                                             </div>
-                                            {r.status === 'pending' && (
-                                                <div className="flex gap-2">
-                                                    <Button onClick={()=>handleReq(r.id, 'accepted')} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
-                                                    <Button onClick={()=>handleReq(r.id, 'declined')} variant={confirmingReqId === `${r.id}-declined` ? 'danger' : 'secondary'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-declined` ? 'Confirm?' : 'Decline'}</Button>
+                                            
+                                            {/* Show Feedback to Organization */}
+                                            {r.feedback && (
+                                                <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-xs font-bold text-yellow-800 uppercase tracking-wide">Client Feedback</span>
+                                                        <StarRating rating={r.feedback.rating} />
+                                                    </div>
+                                                    <p className="text-sm text-gray-700 italic">"{r.feedback.comment}"</p>
                                                 </div>
                                             )}
-                                            {['accepted', 'in_progress', 'completed'].includes(r.status) && (
-                                                <div className="mt-2 md:mt-0">
-                                                    <select value={r.status} onChange={(e) => handleReq(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                                                        <option value="accepted">Not Started</option>
-                                                        <option value="in_progress">In Progress</option>
-                                                        <option value="completed">Completed</option>
-                                                    </select>
-                                                </div>
-                                            )}
-                                            {r.status === 'cancelled' && <span className="text-sm text-gray-500 italic">Cancelled by User</span>}
                                         </div>
                                     ))}
                                     {requests.length===0 && <p className="text-gray-500">No requests.</p>}
@@ -1096,6 +1228,7 @@
         function UserDashboard({ user, userData }) {
             const [activeChatId, setActiveChatId] = useState(null);
             const [paymentModalData, setPaymentModalData] = useState(null);
+            const [feedbackModalId, setFeedbackModalId] = useState(null); // State for feedback modal
             const [orgs, setOrgs] = useState([]);
             const [myRequests, setMyRequests] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
@@ -1117,6 +1250,23 @@
                 } else {
                     setConfirmingCancelId(id);
                     setTimeout(() => setConfirmingCancelId(null), 3000);
+                }
+            };
+
+            const submitFeedback = async ({ rating, comment }) => {
+                if (!feedbackModalId) return;
+                try {
+                    await updateDoc(doc(db, 'requests', feedbackModalId), {
+                        feedback: {
+                            rating,
+                            comment,
+                            createdAt: serverTimestamp()
+                        }
+                    });
+                    setFeedbackModalId(null);
+                } catch (e) {
+                    console.error("Error submitting feedback:", e);
+                    alert("Failed to submit feedback. Please try again.");
                 }
             };
 
@@ -1143,21 +1293,42 @@
                     <div className="lg:col-span-3">
                         {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900">{org.displayName}</h3><p className="text-gray-500 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
                         {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
-                            <div key={r.id} className="p-3 bg-gray-50 rounded border text-sm flex justify-between items-center">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-indigo-900">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
-                                        <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status === 'payment_review' ? 'Payment Review' : r.status}</Badge>
+                            <div key={r.id} className="p-4 bg-gray-50 rounded border text-sm flex flex-col gap-3">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-indigo-900">{r.serviceName} {r.servicePrice && `(₹${r.servicePrice})`}</span>
+                                            <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status === 'payment_review' ? 'Payment Review' : r.status}</Badge>
+                                        </div>
+                                        <div className="text-gray-600 text-xs">{r.orgName}</div>
                                     </div>
-                                    <div className="text-gray-600 text-xs">{r.orgName}</div>
+                                    {['pending', 'payment_review'].includes(r.status) && (
+                                        <button 
+                                            onClick={() => cancelRequest(r.id)} 
+                                            className={`text-xs underline ${confirmingCancelId === r.id ? 'text-red-700 font-bold' : 'text-red-500 hover:text-red-700'}`}
+                                        >
+                                            {confirmingCancelId === r.id ? "Confirm Cancel?" : "Cancel Request"}
+                                        </button>
+                                    )}
                                 </div>
-                                {['pending', 'payment_review'].includes(r.status) && (
-                                    <button 
-                                        onClick={() => cancelRequest(r.id)} 
-                                        className={`text-xs underline ${confirmingCancelId === r.id ? 'text-red-700 font-bold' : 'text-red-500 hover:text-red-700'}`}
-                                    >
-                                        {confirmingCancelId === r.id ? "Confirm Cancel?" : "Cancel Request"}
-                                    </button>
+                                
+                                {/* Feedback Section */}
+                                {r.status === 'completed' && (
+                                    <div className="border-t border-gray-200 pt-3 mt-1">
+                                        {r.feedback ? (
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-gray-500">Your Feedback:</span>
+                                                    <StarRating rating={r.feedback.rating} />
+                                                </div>
+                                                <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12}/> Submitted</span>
+                                            </div>
+                                        ) : (
+                                            <Button variant="secondary" onClick={() => setFeedbackModalId(r.id)} className="w-full !py-1.5 !text-sm border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                                                <Star size={14} /> Rate Service
+                                            </Button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         ))}</div></Card>)}
@@ -1166,6 +1337,7 @@
                     </div>
                     {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
                     {paymentModalData && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full"><h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Payment</h3><p className="text-gray-600 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600">{paymentModalData.serviceName}</span>?</p><div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 text-center"><div className="text-xs text-gray-500 mb-1">UPI ID</div><div className="font-mono font-bold text-lg text-gray-800 select-all">{UPI_ID}</div>{paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}</div><div className="flex gap-3"><Button onClick={() => setPaymentModalData(null)} variant="secondary" className="flex-1">Cancel</Button><Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button></div></div></div>)}
+                    {feedbackModalId && <FeedbackModal onClose={() => setFeedbackModalId(null)} onSubmit={submitFeedback} />}
                 </div>
             );
         }

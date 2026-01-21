@@ -51,7 +51,7 @@
             updatePassword,
             updateEmail,
             updateProfile,
-            sendEmailVerification // Imported for email verification
+            sendEmailVerification
         } from 'firebase/auth';
         import { 
             getFirestore, 
@@ -75,7 +75,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Mail, Star, ThumbsUp // Added Star icon
+            BookOpen, Users, Mail, Star, ThumbsUp, Activity
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -143,7 +143,8 @@
             </div>
         );
 
-        // --- TERMS MODAL (UPDATED) ---
+        // --- SHARED / HELPER COMPONENTS ---
+        
         function TermsModal({ onClose }) {
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
@@ -222,7 +223,6 @@
             );
         }
 
-        // --- FEEDBACK MODAL ---
         function FeedbackModal({ onClose, onSubmit }) {
             const [rating, setRating] = useState(0);
             const [comment, setComment] = useState('');
@@ -283,7 +283,52 @@
             );
         }
 
-        // --- FOOTER COMPONENT ---
+        function DeclineModal({ onClose, onSubmit }) {
+            const [reason, setReason] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!reason.trim()) {
+                    alert("Please provide a reason for declining.");
+                    return;
+                }
+                onSubmit(reason);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-gray-900 text-red-600 flex items-center gap-2">
+                                <XCircle size={24} /> Decline Request
+                            </h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 mb-4">
+                            Per platform policy, you must provide a reason for declining this request. This will be recorded.
+                        </p>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <textarea
+                                className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none resize-none"
+                                rows={4}
+                                placeholder="E.g., Capacity issues, specialization mismatch, conflict of interest..."
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                required
+                            />
+
+                            <div className="flex gap-3">
+                                <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+                                <Button type="submit" variant="danger" className="flex-1">Confirm Decline</Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
         function Footer({ onShowTerms }) {
             return (
                 <footer className="bg-white border-t border-gray-200 mt-12 py-8">
@@ -306,154 +351,6 @@
             );
         }
 
-        // --- MAIN APP COMPONENT ---
-        function App() {
-            const [currentUser, setCurrentUser] = useState(null);
-            const [userRole, setUserRole] = useState(null); 
-            const [userData, setUserData] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [view, setView] = useState('home'); 
-            const [isDeactivated, setIsDeactivated] = useState(false);
-            const [isUnverified, setIsUnverified] = useState(false); 
-            const [showGlobalTerms, setShowGlobalTerms] = useState(false); // Global Terms State
-
-            useEffect(() => {
-                const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                    // Reset blocking states on auth change
-                    setIsDeactivated(false);
-                    setIsUnverified(false);
-
-                    if (user) {
-                        setCurrentUser(user);
-                        try {
-                            if (SUPER_ADMINS.includes(user.email)) {
-                                await setDoc(doc(db, 'users', user.uid), {
-                                    email: user.email, role: 'admin', isActive: true, displayName: 'Super Admin', uid: user.uid
-                                }, { merge: true });
-                            }
-                            const userDocSnap = await getDoc(doc(db, 'users', user.uid));
-                            if (userDocSnap.exists()) {
-                                const data = userDocSnap.data();
-                                
-                                // 1. Admin Deactivation Check
-                                if (!data.isActive) {
-                                    setIsDeactivated(true);
-                                    await signOut(auth);
-                                    setCurrentUser(null);
-                                    setUserRole(null);
-                                    setView('home');
-                                    setLoading(false);
-                                    return;
-                                } 
-                                
-                                // 2. Email Verification Check (Only for 'user' role)
-                                if (data.role === 'user' && !user.emailVerified) {
-                                    setIsUnverified(true);
-                                    setUserData(data);
-                                    setUserRole(data.role);
-                                } else {
-                                    setUserData(data);
-                                    setUserRole(data.role);
-                                }
-                            } else {
-                                setUserRole('user'); 
-                                if (!user.emailVerified) setIsUnverified(true);
-                            }
-                        } catch (error) {
-                            console.error("Error fetching user data:", error);
-                            setUserRole('user');
-                        }
-                    } else {
-                        setCurrentUser(null);
-                        setUserData(null);
-                        setUserRole(null);
-                        setView('home');
-                    }
-                    setLoading(false);
-                });
-                return () => unsubscribe();
-            }, []);
-
-            // --- PRESENCE SYSTEM (HEARTBEAT) ---
-            useEffect(() => {
-                if (!currentUser) return;
-                
-                const updatePresence = async () => {
-                    try {
-                        await updateDoc(doc(db, 'users', currentUser.uid), {
-                            lastSeen: serverTimestamp()
-                        });
-                    } catch (err) {
-                        console.error("Error updating presence:", err);
-                    }
-                };
-                updatePresence();
-                const intervalId = setInterval(updatePresence, 60 * 1000);
-                return () => clearInterval(intervalId);
-            }, [currentUser]);
-
-            const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
-
-            if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
-
-            if (isDeactivated) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
-                            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Deactivated</h2>
-                            <p className="text-gray-600 mb-6">Your account has been deactivated by an administrator. Please contact support for assistance.</p>
-                            <Button onClick={() => setIsDeactivated(false)}>Back to Home</Button>
-                        </div>
-                    </div>
-                );
-            }
-
-            if (isUnverified) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
-                            <Mail className="w-16 h-16 text-indigo-500 mx-auto mb-4" />
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
-                            <p className="text-gray-600 mb-6">
-                                Thanks for joining Shades of Hue! We've sent a verification link to <strong>{currentUser?.email}</strong>. 
-                                Please verify your email to access your dashboard.
-                            </p>
-                            <div className="space-y-3">
-                                <Button className="w-full" onClick={() => window.location.reload()}>I've Verified My Email</Button>
-                                <Button variant="secondary" className="w-full" onClick={async () => {
-                                    try {
-                                        await sendEmailVerification(currentUser);
-                                        alert("Verification email resent!");
-                                    } catch(e) { alert("Error: " + e.message); }
-                                }}>Resend Verification Email</Button>
-                                <button onClick={handleSignOut} className="text-gray-400 hover:text-gray-600 text-sm underline">Sign Out</button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
-                    <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} />
-                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
-                        {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
-                        {view === 'login' && <Login onNavigate={setView} />}
-                        {view === 'signup' && <Signup onNavigate={setView} />}
-                        {view === 'dashboard' && userRole === 'admin' && <AdminDashboard user={currentUser} />}
-                        {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
-                        {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}
-                    </main>
-                    
-                    <Footer onShowTerms={() => setShowGlobalTerms(true)} />
-                    
-                    {showGlobalTerms && <TermsModal onClose={() => setShowGlobalTerms(false)} />}
-                </div>
-            );
-        }
-
-        // --- SHARED COMPONENTS ---
         function Navbar({ user, role, onNavigate, onSignOut, currentView }) {
             const [isOpen, setIsOpen] = useState(false);
             const NavLink = ({ target, label, icon: Icon }) => (
@@ -584,7 +481,6 @@
             );
         }
 
-        // --- COMMON COMPONENTS ---
         function CommonGrievanceList({ user, role }) {
             const [grievances, setGrievances] = useState([]);
             const [subject, setSubject] = useState('');
@@ -641,7 +537,6 @@
             );
         }
 
-        // --- DASHBOARDS & PAGES ---
         function Home({ user, onNavigate }) {
             const [news, setNews] = useState([]);
             useEffect(() => {
@@ -672,7 +567,7 @@
                         </Card>
                     </div>
 
-                    {/* Services Section - ADDED HERE */}
+                    {/* Services Section */}
                     <section className="py-8">
                         <div className="text-center mb-8">
                           <h2 className="text-3xl font-bold text-gray-900">Our Services</h2>
@@ -804,28 +699,55 @@
             );
         }
 
-        // --- ADMIN DASHBOARD ---
-        function AdminDashboard({ user }) {
-            const [activeTab, setActiveTab] = useState('users');
-            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}><Icon size={18} />{label}</button>;
+        // --- SUB-COMPONENTS FOR ADMIN DASHBOARD ---
+        function AdminRequestMonitor() {
+            const [requests, setRequests] = useState([]);
+            
+            useEffect(() => {
+                const q = query(collection(db, 'requests'), orderBy('createdAt', 'desc'));
+                const unsub = onSnapshot(q, (s) => {
+                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setRequests(data);
+                });
+                return () => unsub();
+            }, []);
+
             return (
-                <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1 space-y-4">
-                        <Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Admin Controls</h3><div className="space-y-1">
-                            <SidebarBtn icon={User} label="Manage Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-                            <SidebarBtn icon={Plus} label="Create Account" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
-                            <SidebarBtn icon={Newspaper} label="Manage News" active={activeTab === 'news'} onClick={() => setActiveTab('news')} />
-                            <SidebarBtn icon={IndianRupee} label="Payment Approvals" active={activeTab === 'approvals'} onClick={() => setActiveTab('approvals')} />
-                            <SidebarBtn icon={AlertTriangle} label="Grievance Portal" active={activeTab === 'grievances'} onClick={() => setActiveTab('grievances')} />
-                            <SidebarBtn icon={MessageSquare} label="Conversation Monitor" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} />
-                            {/* New Feedback Monitor Tab */}
-                            <SidebarBtn icon={Star} label="Service Feedback" active={activeTab === 'feedback'} onClick={() => setActiveTab('feedback')} />
-                        </div></Card>
+                <Card className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Activity size={20} className="text-indigo-600" /> Request Monitor
+                    </h3>
+                    <div className="space-y-4">
+                        {requests.map(req => (
+                            <div key={req.id} className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
+                                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                                    <div className="flex-grow">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-gray-900 text-lg">{req.serviceName}</span>
+                                            <Badge color={req.status==='accepted'?'green':req.status==='declined'?'red':req.status==='in_progress'?'yellow':req.status==='completed'?'green':req.status==='cancelled'?'gray':'blue'}>
+                                                {req.status === 'payment_review' ? 'Payment Review' : req.status}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 mt-2">
+                                            <span><strong>User:</strong> {req.userName} ({req.userEmail})</span>
+                                            <span><strong>Org:</strong> {req.orgName}</span>
+                                            <span><strong>Price:</strong> {req.servicePrice ? `₹${req.servicePrice}` : 'Free'}</span>
+                                            <span><strong>Date:</strong> {req.createdAt?.toDate ? req.createdAt.toDate().toLocaleDateString() : 'N/A'}</span>
+                                        </div>
+                                        
+                                        {/* Show Decline Reason */}
+                                        {req.status === 'declined' && req.declineReason && (
+                                            <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded text-sm text-red-800">
+                                                <strong>Reason for Decline:</strong> {req.declineReason}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {requests.length === 0 && <div className="text-center text-gray-500 py-8">No requests found in the system.</div>}
                     </div>
-                    <div className="lg:col-span-3">
-                        {activeTab === 'users' && <AdminUserList />} {activeTab === 'create' && <AdminCreateUser />} {activeTab === 'news' && <AdminNewsManager />} {activeTab === 'approvals' && <AdminPaymentApprovals />} {activeTab === 'grievances' && <AdminGrievances />} {activeTab === 'messages' && <AdminMessageCenter />} {activeTab === 'feedback' && <AdminFeedbackMonitor />}
-                    </div>
-                </div>
+                </Card>
             );
         }
 
@@ -837,7 +759,6 @@
                 const unsub = onSnapshot(collection(db, 'users'), (s) => {
                     const data = s.docs.map(d => ({id:d.id, ...d.data()}));
                     data.sort((a,b) => {
-                        // Sort by active status first, then last seen
                         if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
                         const timeA = a.lastSeen?.seconds || 0;
                         const timeB = b.lastSeen?.seconds || 0;
@@ -853,11 +774,10 @@
             
             return (
                 <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y">{users.map(u => {
-                    // Logic for Online Status
                     const now = new Date();
                     const lastSeen = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date(0);
-                    const diff = (now - lastSeen) / 1000 / 60; // difference in minutes
-                    const isOnline = diff < 2; // Consider online if seen in last 2 mins
+                    const diff = (now - lastSeen) / 1000 / 60; 
+                    const isOnline = diff < 2;
 
                     return (
                         <tr key={u.id} className={!u.isActive ? "bg-amber-50" : ""}>
@@ -866,8 +786,6 @@
                                 <div className="text-xs text-gray-500">{u.email}</div>
                             </td>
                             <td className="capitalize"><Badge color={u.role==='admin'?'purple':u.role==='organization'?'blue':'gray'}>{u.role}</Badge></td>
-                            
-                            {/* NEW: Online Status Column */}
                             <td>
                                 {isOnline ? (
                                     <span className="flex items-center gap-1.5 text-green-700 font-medium text-xs bg-green-50 px-2 py-1 rounded-full w-fit">
@@ -879,12 +797,9 @@
                                     </span>
                                 )}
                             </td>
-
-                            {/* NEW: Last Seen Column */}
                             <td className="text-xs text-gray-500">
                                 {u.lastSeen?.toDate ? u.lastSeen.toDate().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Never'}
                             </td>
-
                             <td>{u.isActive?<span className="text-green-600 flex items-center gap-1"><CheckCircle size={14}/> Active</span>:<span className="text-amber-600 flex items-center gap-1"><Clock size={14}/> Pending</span>}</td>
                             <td className="text-right space-x-2">{!SUPER_ADMINS.includes(u.email) && <><button onClick={()=>toggleStatus(u.id, u.isActive)} className={!u.isActive ? "text-green-600 hover:bg-green-100 p-1 rounded" : "text-gray-400"} title={u.isActive ? "Deactivate" : "Approve"}>{u.isActive ? <XCircle size={16}/> : <CheckCircle size={16}/>}</button><button onClick={()=>deleteUser(u.id)} className={confirmingId === u.id ? "text-red-600 font-bold" : "text-gray-400 hover:text-red-600"}>{confirmingId === u.id ? "Sure?" : <Trash2 size={16}/>}</button></>}</td>
                         </tr>
@@ -912,7 +827,7 @@
                         lastSeen: serverTimestamp(),
                         ...(form.role==='organization'?{description:'New Org', services:[]}:{}) 
                     });
-                    await signOut(secAuth); // Sign out secondary
+                    await signOut(secAuth);
                     setMsg({type:'success', text:'Created!'}); setForm({email:'', password:'', name:'', role:'organization'});
                 } catch(err) { setMsg({type:'error', text:err.message}); }
             };
@@ -1010,7 +925,6 @@
             );
         }
 
-        // New Component: Admin Feedback Monitor
         function AdminFeedbackMonitor() {
             const [feedbackList, setFeedbackList] = useState([]);
             
@@ -1019,7 +933,7 @@
                 const unsub = onSnapshot(q, (s) => {
                     const data = s.docs
                         .map(d => ({ id: d.id, ...d.data() }))
-                        .filter(item => item.feedback) // Only show requests with feedback
+                        .filter(item => item.feedback) 
                         .sort((a, b) => (b.feedback?.createdAt?.seconds || 0) - (a.feedback?.createdAt?.seconds || 0));
                     setFeedbackList(data);
                 });
@@ -1058,6 +972,64 @@
             );
         }
 
+        // --- ADMIN DASHBOARD ---
+        function AdminDashboard({ user }) {
+            const [activeTab, setActiveTab] = useState('users');
+            const SidebarBtn = ({ icon: Icon, label, active, onClick }) => <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}><Icon size={18} />{label}</button>;
+            return (
+                <div className="grid lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1 space-y-4">
+                        <Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Admin Controls</h3><div className="space-y-1">
+                            <SidebarBtn icon={User} label="Manage Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+                            <SidebarBtn icon={Plus} label="Create Account" active={activeTab === 'create'} onClick={() => setActiveTab('create')} />
+                            <SidebarBtn icon={Newspaper} label="Manage News" active={activeTab === 'news'} onClick={() => setActiveTab('news')} />
+                            <SidebarBtn icon={IndianRupee} label="Payment Approvals" active={activeTab === 'approvals'} onClick={() => setActiveTab('approvals')} />
+                            <SidebarBtn icon={Activity} label="Request Monitor" active={activeTab === 'monitor'} onClick={() => setActiveTab('monitor')} />
+                            <SidebarBtn icon={AlertTriangle} label="Grievance Portal" active={activeTab === 'grievances'} onClick={() => setActiveTab('grievances')} />
+                            <SidebarBtn icon={MessageSquare} label="Conversation Monitor" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} />
+                            <SidebarBtn icon={Star} label="Service Feedback" active={activeTab === 'feedback'} onClick={() => setActiveTab('feedback')} />
+                        </div></Card>
+                    </div>
+                    <div className="lg:col-span-3">
+                        {activeTab === 'users' && <AdminUserList />} 
+                        {activeTab === 'create' && <AdminCreateUser />} 
+                        {activeTab === 'news' && <AdminNewsManager />} 
+                        {activeTab === 'approvals' && <AdminPaymentApprovals />} 
+                        {activeTab === 'monitor' && <AdminRequestMonitor />}
+                        {activeTab === 'grievances' && <AdminGrievances />} 
+                        {activeTab === 'messages' && <AdminMessageCenter />} 
+                        {activeTab === 'feedback' && <AdminFeedbackMonitor />}
+                    </div>
+                </div>
+            );
+        }
+
+        // --- SUB-COMPONENTS FOR ORG DASHBOARD ---
+        function OrgChatList({ user, onSelectChat }) {
+            const [chats, setChats] = useState([]);
+            useEffect(() => {
+                const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
+                const unsub = onSnapshot(q, (s) => {
+                    const chatData = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    chatData.sort((a, b) => {
+                        const timeA = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : 0;
+                        const timeB = b.lastMessageTime?.toMillis ? b.lastMessageTime.toMillis() : 0;
+                        return timeB - timeA;
+                    });
+                    setChats(chatData);
+                });
+                return () => unsub();
+            }, [user.uid]);
+            
+            const getPartnerName = (chat) => { 
+                const partnerId = chat.participants.find(p => p !== user.uid); 
+                const pData = chat.participantData?.[partnerId];
+                return pData?.name || "User"; 
+            };
+            
+            return (<Card className="p-6"><h3 className="font-bold mb-4">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 text-center py-4">No active conversations.</p>}</div></Card>);
+        }
+
         // --- ORG DASHBOARD ---
         function OrgDashboard({ user, userData }) {
             const [tab, setTab] = useState('profile');
@@ -1065,7 +1037,13 @@
             const [data, setData] = useState({ desc: userData?.description||'', services: userData?.services||[], newServiceName:'', newServicePrice: '', newServiceDesc: '' });
             const [requests, setRequests] = useState([]);
             const [activeChatId, setActiveChatId] = useState(null);
+            
+            // Logic for Accepting
             const [confirmingReqId, setConfirmingReqId] = useState(null);
+            
+            // Logic for Declining
+            const [declineModalReqId, setDeclineModalReqId] = useState(null);
+
             // Profile Edit States
             const [profileName, setProfileName] = useState(userData?.displayName || '');
             const [profileEmail, setProfileEmail] = useState(user.email || '');
@@ -1093,17 +1071,34 @@
 
             const saveProfile = async () => { await updateDoc(doc(db, 'users', user.uid), { description: data.desc, services: data.services }); setIsEditing(false); };
             
-            // Logic for Accept/Decline buttons (requires confirmation)
-            const handleReq = (id, status) => { const actionId = `${id}-${status}`; if (confirmingReqId === actionId) { confirmHandleReq(id, status); } else { setConfirmingReqId(actionId); setTimeout(() => setConfirmingReqId(null), 3000); } };
-            const confirmHandleReq = async (id, status) => { await updateDoc(doc(db, 'requests', id), { status }); setConfirmingReqId(null); };
+            const handleAcceptToggle = (id) => { 
+                const actionId = `${id}-accepted`; 
+                if (confirmingReqId === actionId) { 
+                    updateRequestStatus(id, 'accepted'); 
+                } else { 
+                    setConfirmingReqId(actionId); 
+                    setTimeout(() => setConfirmingReqId(null), 3000); 
+                } 
+            };
 
-            // Logic for Dropdown Status Change (Immediate update)
-            const handleStatusChange = async (id, newStatus) => {
+            const updateRequestStatus = async (id, status, extraData = {}) => {
                 try {
-                    await updateDoc(doc(db, 'requests', id), { status: newStatus });
+                    await updateDoc(doc(db, 'requests', id), { status, ...extraData });
+                    setConfirmingReqId(null);
                 } catch (e) {
                     console.error("Error updating status:", e);
                 }
+            };
+
+            const onDeclineSubmit = async (reason) => {
+                if(declineModalReqId) {
+                    await updateRequestStatus(declineModalReqId, 'declined', { declineReason: reason });
+                    setDeclineModalReqId(null);
+                }
+            };
+
+            const handleStatusChange = async (id, newStatus) => {
+                await updateRequestStatus(id, newStatus);
             };
 
             const handleAddService = () => { if(data.newServiceName) { const newServiceObj = { name: data.newServiceName, price: data.newServicePrice, description: data.newServiceDesc }; setData({ ...data, services: [...data.services, newServiceObj], newServiceName: '', newServicePrice: '', newServiceDesc: '' }); } };
@@ -1112,17 +1107,14 @@
                 e.preventDefault();
                 setProfileMsg({type:'', text:''});
                 try {
-                    // 1. Update Display Name in Auth and Firestore
                     if(profileName !== userData.displayName) {
                         await updateProfile(user, { displayName: profileName });
                         await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
                     }
-                    // 2. Update Email
                     if(profileEmail !== user.email) {
                         await updateEmail(user, profileEmail);
                         await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
                         setProfileMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
-                        // Optional: Sign out if email changed to force re-login with new email
                     } else {
                         setProfileMsg({type:'success', text:'Profile updated successfully!'});
                     }
@@ -1186,14 +1178,13 @@
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
-                                                    {/* HIDE EMAIL: Display Name instead */}
                                                     <div className="text-sm text-gray-500">{r.userName || "User"}</div>
                                                     <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
                                                 </div>
                                                 {r.status === 'pending' && (
                                                     <div className="flex gap-2">
-                                                        <Button onClick={()=>handleReq(r.id, 'accepted')} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
-                                                        <Button onClick={()=>handleReq(r.id, 'declined')} variant={confirmingReqId === `${r.id}-declined` ? 'danger' : 'secondary'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-declined` ? 'Confirm?' : 'Decline'}</Button>
+                                                        <Button onClick={()=>handleAcceptToggle(r.id)} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
+                                                        <Button onClick={()=>setDeclineModalReqId(r.id)} variant="secondary" className="!py-1 transition-all">Decline</Button>
                                                     </div>
                                                 )}
                                                 {['accepted', 'in_progress', 'completed'].includes(r.status) && (
@@ -1206,9 +1197,13 @@
                                                     </div>
                                                 )}
                                                 {r.status === 'cancelled' && <span className="text-sm text-gray-500 italic">Cancelled by User</span>}
+                                                {r.status === 'declined' && r.declineReason && (
+                                                    <div className="text-sm text-red-600 italic bg-red-50 p-2 rounded">
+                                                        <strong>Decline Reason:</strong> {r.declineReason}
+                                                    </div>
+                                                )}
                                             </div>
                                             
-                                            {/* Show Feedback to Organization */}
                                             {r.feedback && (
                                                 <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
                                                     <div className="flex items-center gap-2 mb-1">
@@ -1228,34 +1223,66 @@
                         {tab === 'grievances' && <CommonGrievanceList user={user} role="organization" />}
                     </div>
                     {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
+                    {declineModalReqId && <DeclineModal onClose={() => setDeclineModalReqId(null)} onSubmit={onDeclineSubmit} />}
                 </div>
             );
         }
 
-        function OrgChatList({ user, onSelectChat }) {
-            const [chats, setChats] = useState([]);
-            useEffect(() => {
-                const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
-                const unsub = onSnapshot(q, (s) => {
-                    const chatData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    chatData.sort((a, b) => {
-                        const timeA = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : 0;
-                        const timeB = b.lastMessageTime?.toMillis ? b.lastMessageTime.toMillis() : 0;
-                        return timeB - timeA;
-                    });
-                    setChats(chatData);
-                });
-                return () => unsub();
-            }, [user.uid]);
+        // --- SUB-COMPONENTS FOR USER DASHBOARD ---
+        function UserProfile({ user, userData }) {
+            const [pass, setPass] = useState('');
+            const [confirm, setConfirm] = useState('');
+            const [msg, setMsg] = useState({ type: '', text: '' });
+            const [profileName, setProfileName] = useState(userData?.displayName || '');
+            const [profileEmail, setProfileEmail] = useState(user.email || '');
+            const [infoMsg, setInfoMsg] = useState({ type: '', text: '' });
+
+            useEffect(() => { 
+                if(userData) setProfileName(userData.displayName || '');
+                if(user) setProfileEmail(user.email);
+            }, [userData, user]);
+
+            const handleUpdatePassword = async (e) => { e.preventDefault(); if (pass !== confirm) { setMsg({ type: 'error', text: 'Passwords do not match' }); return; } try { await updatePassword(user, pass); setMsg({ type: 'success', text: 'Password updated successfully!' }); setPass(''); setConfirm(''); } catch (error) { setMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Please log out and login again to update password.' : error.message }); } };
             
-            // HIDE EMAIL: Display Name or "User"
-            const getPartnerName = (chat) => { 
-                const partnerId = chat.participants.find(p => p !== user.uid); 
-                const pData = chat.participantData?.[partnerId];
-                return pData?.name || "User"; 
+            const handleUpdateInfo = async (e) => {
+                e.preventDefault();
+                setInfoMsg({type:'', text:''});
+                try {
+                    if(profileName !== userData.displayName) {
+                        await updateProfile(user, { displayName: profileName });
+                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
+                    }
+                    if(profileEmail !== user.email) {
+                        await updateEmail(user, profileEmail);
+                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
+                        setInfoMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
+                    } else {
+                        setInfoMsg({type:'success', text:'Profile updated successfully!'});
+                    }
+                } catch(error) {
+                    if(error.code === 'auth/requires-recent-login') {
+                        setInfoMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
+                    } else {
+                        setInfoMsg({type:'error', text: error.message});
+                    }
+                }
             };
-            
-            return (<Card className="p-6"><h3 className="font-bold mb-4">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 text-center py-4">No active conversations.</p>}</div></Card>);
+
+            return (
+                <div className="space-y-6">
+                    <Card className="p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600" /> Account Details</h3>
+                        <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
+                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
+                            <div><label className="block text-sm font-medium text-gray-500">Full Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                            <div><label className="block text-sm font-medium text-gray-500">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                            <div><label className="block text-sm font-medium text-gray-500">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
+                            <Button type="submit">Update Info</Button>
+                        </form>
+                    </Card>
+                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
+                </div>
+            );
         }
 
         // --- USER DASHBOARD ---
@@ -1272,7 +1299,6 @@
             useEffect(() => { const unsubOrgs = onSnapshot(query(collection(db, 'users'), where('role', '==', 'organization'), where('isActive', '==', true)), s => setOrgs(s.docs.map(d => ({ id: d.id, ...d.data() })))); const unsubReq = onSnapshot(query(collection(db, 'requests'), where('userId', '==', user.uid)), s => setMyRequests(s.docs.map(d => ({ id: d.id, ...d.data() })))); return () => { unsubOrgs(); unsubReq(); }; }, [user.uid]);
             const initiateRequest = (org, serviceObj) => { setPaymentModalData({ org, serviceName: typeof serviceObj === 'string' ? serviceObj : serviceObj.name, servicePrice: typeof serviceObj === 'object' && serviceObj.price ? serviceObj.price : null }); };
             
-            // HIDE EMAIL: Store userName instead of just email for Org visibility
             const confirmPayment = async () => { if (!paymentModalData) return; try { await addDoc(collection(db, 'requests'), { userId: user.uid, userEmail: user.email, userName: userData.displayName || 'User', orgId: paymentModalData.org.id, orgName: paymentModalData.org.displayName, serviceName: paymentModalData.serviceName, servicePrice: paymentModalData.servicePrice, status: 'payment_review', createdAt: serverTimestamp() }); setPaymentModalData(null); } catch (e) { } };
             
             const cancelRequest = async (id) => {
@@ -1312,7 +1338,6 @@
                 else { 
                     const newChatRef = await addDoc(collection(db, 'chats'), { 
                         participants: [user.uid, org.id], 
-                        // HIDE EMAIL: Store minimal data if possible, but keeping email in DB is fine as long as UI doesn't show it.
                         participantData: { [user.uid]: { name: user.displayName || 'User', email: user.email }, [org.id]: { name: org.displayName, email: org.email } }, 
                         createdAt: serverTimestamp(), lastMessage: '', lastMessageTime: serverTimestamp() 
                     }); 
@@ -1376,62 +1401,145 @@
             );
         }
 
-        function UserProfile({ user, userData }) {
-            // Password State
-            const [pass, setPass] = useState('');
-            const [confirm, setConfirm] = useState('');
-            const [msg, setMsg] = useState({ type: '', text: '' });
-            // Profile Info State
-            const [profileName, setProfileName] = useState(userData?.displayName || '');
-            const [profileEmail, setProfileEmail] = useState(user.email || '');
-            const [infoMsg, setInfoMsg] = useState({ type: '', text: '' });
+        // --- MAIN APP COMPONENT (MOVED TO END) ---
+        function App() {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [userRole, setUserRole] = useState(null); 
+            const [userData, setUserData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [view, setView] = useState('home'); 
+            const [isDeactivated, setIsDeactivated] = useState(false);
+            const [isUnverified, setIsUnverified] = useState(false); 
+            const [showGlobalTerms, setShowGlobalTerms] = useState(false); 
 
-            useEffect(() => { 
-                if(userData) setProfileName(userData.displayName || '');
-                if(user) setProfileEmail(user.email);
-            }, [userData, user]);
+            useEffect(() => {
+                const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                    setIsDeactivated(false);
+                    setIsUnverified(false);
 
-            const handleUpdatePassword = async (e) => { e.preventDefault(); if (pass !== confirm) { setMsg({ type: 'error', text: 'Passwords do not match' }); return; } try { await updatePassword(user, pass); setMsg({ type: 'success', text: 'Password updated successfully!' }); setPass(''); setConfirm(''); } catch (error) { setMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Please log out and login again to update password.' : error.message }); } };
-            
-            const handleUpdateInfo = async (e) => {
-                e.preventDefault();
-                setInfoMsg({type:'', text:''});
-                try {
-                    // Update Name
-                    if(profileName !== userData.displayName) {
-                        await updateProfile(user, { displayName: profileName });
-                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                    }
-                    // Update Email
-                    if(profileEmail !== user.email) {
-                        await updateEmail(user, profileEmail);
-                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
-                        setInfoMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
+                    if (user) {
+                        setCurrentUser(user);
+                        try {
+                            if (SUPER_ADMINS.includes(user.email)) {
+                                await setDoc(doc(db, 'users', user.uid), {
+                                    email: user.email, role: 'admin', isActive: true, displayName: 'Super Admin', uid: user.uid
+                                }, { merge: true });
+                            }
+                            const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                            if (userDocSnap.exists()) {
+                                const data = userDocSnap.data();
+                                
+                                if (!data.isActive) {
+                                    setIsDeactivated(true);
+                                    await signOut(auth);
+                                    setCurrentUser(null);
+                                    setUserRole(null);
+                                    setView('home');
+                                    setLoading(false);
+                                    return;
+                                } 
+                                
+                                if (data.role === 'user' && !user.emailVerified) {
+                                    setIsUnverified(true);
+                                    setUserData(data);
+                                    setUserRole(data.role);
+                                } else {
+                                    setUserData(data);
+                                    setUserRole(data.role);
+                                }
+                            } else {
+                                setUserRole('user'); 
+                                if (!user.emailVerified) setIsUnverified(true);
+                            }
+                        } catch (error) {
+                            console.error("Error fetching user data:", error);
+                            setUserRole('user');
+                        }
                     } else {
-                        setInfoMsg({type:'success', text:'Profile updated successfully!'});
+                        setCurrentUser(null);
+                        setUserData(null);
+                        setUserRole(null);
+                        setView('home');
                     }
-                } catch(error) {
-                    if(error.code === 'auth/requires-recent-login') {
-                        setInfoMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
-                    } else {
-                        setInfoMsg({type:'error', text: error.message});
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            useEffect(() => {
+                if (!currentUser) return;
+                
+                const updatePresence = async () => {
+                    try {
+                        await updateDoc(doc(db, 'users', currentUser.uid), {
+                            lastSeen: serverTimestamp()
+                        });
+                    } catch (err) {
+                        console.error("Error updating presence:", err);
                     }
-                }
-            };
+                };
+                updatePresence();
+                const intervalId = setInterval(updatePresence, 60 * 1000);
+                return () => clearInterval(intervalId);
+            }, [currentUser]);
+
+            const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
+
+            if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+
+            if (isDeactivated) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+                            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Deactivated</h2>
+                            <p className="text-gray-600 mb-6">Your account has been deactivated by an administrator. Please contact support for assistance.</p>
+                            <Button onClick={() => setIsDeactivated(false)}>Back to Home</Button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (isUnverified) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+                            <Mail className="w-16 h-16 text-indigo-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
+                            <p className="text-gray-600 mb-6">
+                                Thanks for joining Shades of Hue! We've sent a verification link to <strong>{currentUser?.email}</strong>. 
+                                Please verify your email to access your dashboard.
+                            </p>
+                            <div className="space-y-3">
+                                <Button className="w-full" onClick={() => window.location.reload()}>I've Verified My Email</Button>
+                                <Button variant="secondary" className="w-full" onClick={async () => {
+                                    try {
+                                        await sendEmailVerification(currentUser);
+                                        alert("Verification email resent!");
+                                    } catch(e) { alert("Error: " + e.message); }
+                                }}>Resend Verification Email</Button>
+                                <button onClick={handleSignOut} className="text-gray-400 hover:text-gray-600 text-sm underline">Sign Out</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
-                <div className="space-y-6">
-                    <Card className="p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><User size={20} className="text-indigo-600" /> Account Details</h3>
-                        <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
-                            {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
-                            <div><label className="block text-sm font-medium text-gray-500">Full Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
-                            <Button type="submit">Update Info</Button>
-                        </form>
-                    </Card>
-                    <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3><form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">{msg.text && <div className={`p-3 text-sm rounded-lg ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</div>}<div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div><Button type="submit">Update Password</Button></form></Card>
+                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
+                    <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} />
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+                        {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
+                        {view === 'login' && <Login onNavigate={setView} />}
+                        {view === 'signup' && <Signup onNavigate={setView} />}
+                        {view === 'dashboard' && userRole === 'admin' && <AdminDashboard user={currentUser} />}
+                        {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
+                        {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}
+                    </main>
+                    
+                    <Footer onShowTerms={() => setShowGlobalTerms(true)} />
+                    
+                    {showGlobalTerms && <TermsModal onClose={() => setShowGlobalTerms(false)} />}
                 </div>
             );
         }

@@ -143,7 +143,7 @@
             </div>
         );
 
-        // --- TERMS MODAL ---
+        // --- TERMS MODAL (UPDATED) ---
         function TermsModal({ onClose }) {
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
@@ -162,52 +162,55 @@
                             
                             <div>
                                 <h4 className="font-bold text-base text-gray-800 mb-2">I. Core Principles and Code of Conduct</h4>
-                                <p>These principles are the foundation of our community and mandate the highest standards of professional and ethical behavior.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Mission Alignment:</strong> All panel organizations must actively align with the mission of supporting and empowering the queer community. Adherence to a strict Non-Discrimination Policy based on sexual orientation, gender identity, religion, background, or ability is mandatory.</li>
                                     <li><strong>Respect and Professionalism:</strong> We enforce a Zero-Tolerance Policy for rude, aggressive, discriminatory, or harassing behavior. Professionalism is expected at all times toward customers, platform users, and Shades of Hue administrators.</li>
-                                    <li><strong>Prioritization of Stakeholders:</strong> The platform is dedicated to ensuring the highest quality service and privacy for our Customers while providing clear operational guidelines and fair support for our Partner Organizations.</li>
+                                    <li><strong>Prioritization of Stakeholders:</strong> The platform is dedicated to ensuring the highest quality service and privacy for our customers while providing clear operational guidelines and fair support for our Partner Organizations.</li>
                                 </ul>
                             </div>
 
                             <div>
                                 <h4 className="font-bold text-base text-gray-800 mb-2">II. Customer Privacy and Data Protection Policy</h4>
-                                <p>Protecting the highly sensitive information of our users is our top priority.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Anonymity & Confidentiality:</strong> User data is encrypted and handled in strict confidence. Customers have the right to maintain a degree of anonymity until they choose to share further details directly with a partner organization.</li>
-                                    <li><strong>Limited Information Disclosure to Partners:</strong> Upon a confirmed match, partner organizations will only be provided with the minimal, non-sensitive identifying details required to initiate service: Name (or preferred name), Pronouns, Age, Email ID.</li>
+                                    <li><strong>Limited Information Disclosure to Partners:</strong> Upon a confirmed match, partner organizations will only be provided with the minimal, non-sensitive identifying details required.</li>
                                     <li><strong>Monitoring for Safety:</strong> For the protection of all parties and to maintain platform integrity, all primary chat initiations within the Shades of Hue application are monitored by trained administrators. This monitoring is solely for dispute resolution and policy enforcement (e.g., preventing poaching).</li>
                                 </ul>
                             </div>
 
                             <div>
                                 <h4 className="font-bold text-base text-gray-800 mb-2">III. Service Request Management and Service Level Agreement (SLA)</h4>
-                                <p>These rules define the required response times and communication standards for partner organizations.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
                                     <li><strong>Request Acceptance Window:</strong> Partner organizations must review all submitted customer requests and issue a definitive Accept or Decline decision within a maximum period of 10 business days (1 to 2 weeks) from the time the request is assigned.</li>
                                     <li><strong>Mandatory Decline Rationale:</strong> If a request is declined, the organization is required to provide a clear and concise reason to Shades of Hue administration (e.g., capacity issues, specialization mismatch, conflict of interest).</li>
-                                    <li><strong>Optimal Matching Commitment:</strong> Shades of Hue commits to matching customers with the most suitable partner based on the customer’s needs and the organization’s expertise, ensuring a targeted and high-quality connection.</li>
+                                    <li><strong>Optimal Matching Commitment:</strong> Shades of Hue commits to matching customers with the most suitable partner based on the customer's needs and the organization's expertise, ensuring a targeted and high-quality connection.</li>
                                 </ul>
                             </div>
 
                             <div>
-                                <h4 className="font-bold text-base text-gray-800 mb-2">IV. Accountability and Quality Assurance (Three-Strike Policy)</h4>
-                                <p>This system ensures high service standards while providing a fair process for resolving conflicts.</p>
+                                <h4 className="font-bold text-base text-gray-800 mb-2">IV. Accountability and Quality Assurance</h4>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Grounds for a Strike:</strong> A strike may be issued to a partner organization for instances of failure to satisfy a customer’s essential needs or if a customer issue significantly escalates due to negligence, prolonged unresponsiveness, or poor conduct.</li>
-                                    <li><strong>Dispute Resolution Meeting:</strong> Strikes are not applied automatically. Before any strike is issued, a mandatory Dispute Resolution Meeting will be held. This meeting will include the customer, the organization’s representative, and a Shades of Hue administrator, who will objectively review all facts and testimony to render a final decision.</li>
-                                    <li><strong>Suspension Protocol (Revised):</strong> An organization that accumulates three (3) strikes within any rolling 30-day period will not be able to receive new customer leads suspended for thirty (30) days/one (1) calendar month.</li>
+                                    <li><strong>Grounds for a Strike:</strong> A strike may be issued to a partner organization for instances of failure to satisfy a customer's essential needs or if a customer issue significantly escalates due to negligence, prolonged unresponsiveness, or poor conduct.</li>
+                                    <li><strong>Dispute Resolution Meeting:</strong> Strikes are not applied automatically. Before any strike is issued, a mandatory Dispute Resolution Meeting will be held. This meeting will include the customer, the organization's representative, and a Shades of Hue administrator, who will objectively review all facts and testimony to render a final decision.</li>
+                                    <li><strong>Suspension Protocol:</strong> An organization with a strike will not be able to receive new customer leads and will be suspended for thirty (30) days/one (1) calendar month.</li>
+                                    <li><strong>Account Deletion Protocol:</strong> An organization with 3 or more strikes will have their account deleted permanently.</li>
                                     <li><strong>Continuity of Service:</strong> Crucially, the suspension only restricts new leads. The organization must continue and complete all ongoing services, projects, or existing client relationships during the suspension period without interruption.</li>
                                 </ul>
                             </div>
 
                             <div>
                                 <h4 className="font-bold text-base text-gray-800 mb-2">V. Ethical Conduct, Partner Protection, and Termination</h4>
-                                <p>These rules protect the platform's ecosystem and ensure fair operating procedures for all partners.</p>
                                 <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    <li><strong>Zero-Tolerance for Customer Poaching:</strong> Any attempt by a partner organization to solicit, recruit, or poach a customer outside of the Shades of Hue platform—where the initial engagement was facilitated and monitored via our app’s chat—will result in the immediate and permanent termination of the organization's account and its listing.</li>
+                                    <li><strong>Zero-Tolerance for Customer Poaching:</strong> Any attempt by a partner organization to solicit, recruit, or poach a customer outside of the Shades of Hue platform where the initial engagement was facilitated and monitored via our app's chat will result in the immediate and permanent termination of the organization's account and its listing.</li>
                                     <li><strong>Mandatory Reporting of Issues:</strong> Partner organizations are required to report any disruptive, abusive, or problematic behavior from a customer to the Shades of Hue administration at the earliest opportunity for intervention and support.</li>
                                     <li><strong>Voluntary Termination Notice:</strong> If a partner organization decides to terminate its relationship with Shades of Hue, they are required to serve a mandatory 30-day termination period. During this period, they must complete all existing commitments and may not accept any new leads.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 className="font-bold text-base text-gray-800 mb-2">VI. Platform Communication and Policy Changes</h4>
+                                <ul className="list-disc pl-5 mt-2 space-y-1">
+                                    <li><strong>Advance Notice for Major Changes:</strong> Shades of Hue is committed to transparent governance. We will provide all partner organizations with a minimum of 15 days' advance written notice before implementing any major changes to platform policies, guidelines, or core operational procedures. This ensures partners have adequate time to adapt and prepare.</li>
                                 </ul>
                             </div>
                         </div>
@@ -280,6 +283,29 @@
             );
         }
 
+        // --- FOOTER COMPONENT ---
+        function Footer({ onShowTerms }) {
+            return (
+                <footer className="bg-white border-t border-gray-200 mt-12 py-8">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">S</div>
+                            <span className="font-bold text-gray-900">Shades of Hue</span>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
+                            <span>&copy; {new Date().getFullYear()} Shades of Hue. All rights reserved.</span>
+                            <button 
+                                onClick={onShowTerms} 
+                                className="hover:text-indigo-600 transition-colors underline"
+                            >
+                                Terms & Conditions
+                            </button>
+                        </div>
+                    </div>
+                </footer>
+            );
+        }
+
         // --- MAIN APP COMPONENT ---
         function App() {
             const [currentUser, setCurrentUser] = useState(null);
@@ -288,7 +314,8 @@
             const [loading, setLoading] = useState(true);
             const [view, setView] = useState('home'); 
             const [isDeactivated, setIsDeactivated] = useState(false);
-            const [isUnverified, setIsUnverified] = useState(false); // New state for email verification
+            const [isUnverified, setIsUnverified] = useState(false); 
+            const [showGlobalTerms, setShowGlobalTerms] = useState(false); // Global Terms State
 
             useEffect(() => {
                 const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -322,7 +349,6 @@
                                 // 2. Email Verification Check (Only for 'user' role)
                                 if (data.role === 'user' && !user.emailVerified) {
                                     setIsUnverified(true);
-                                    // We don't sign them out, we just show the unverified screen
                                     setUserData(data);
                                     setUserRole(data.role);
                                 } else {
@@ -331,7 +357,6 @@
                                 }
                             } else {
                                 setUserRole('user'); 
-                                // Fallback for users without doc (shouldn't happen with new flow)
                                 if (!user.emailVerified) setIsUnverified(true);
                             }
                         } catch (error) {
@@ -355,7 +380,6 @@
                 
                 const updatePresence = async () => {
                     try {
-                        // Update the user's document with the current timestamp
                         await updateDoc(doc(db, 'users', currentUser.uid), {
                             lastSeen: serverTimestamp()
                         });
@@ -363,13 +387,8 @@
                         console.error("Error updating presence:", err);
                     }
                 };
-
-                // Update immediately on mount/login
                 updatePresence();
-
-                // Update every minute to keep "Online" status fresh
                 const intervalId = setInterval(updatePresence, 60 * 1000);
-
                 return () => clearInterval(intervalId);
             }, [currentUser]);
 
@@ -390,7 +409,6 @@
                 );
             }
 
-            // New Unverified Screen
             if (isUnverified) {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -417,9 +435,9 @@
             }
 
             return (
-                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+                <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
                     <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} />
-                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
                         {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
                         {view === 'login' && <Login onNavigate={setView} />}
                         {view === 'signup' && <Signup onNavigate={setView} />}
@@ -427,6 +445,10 @@
                         {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
                         {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}
                     </main>
+                    
+                    <Footer onShowTerms={() => setShowGlobalTerms(true)} />
+                    
+                    {showGlobalTerms && <TermsModal onClose={() => setShowGlobalTerms(false)} />}
                 </div>
             );
         }
@@ -742,7 +764,7 @@
 
                     // Send verification email immediately for new users
                     await sendEmailVerification(userCredential.user);
-                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard. Please check your Spam Email Folder.");
+                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard.");
 
                     onNavigate('home'); 
                 } catch (err) { 

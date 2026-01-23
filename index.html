@@ -1107,23 +1107,16 @@
                 e.preventDefault();
                 setProfileMsg({type:'', text:''});
                 try {
+                    // Update Display Name in Auth and Firestore
                     if(profileName !== userData.displayName) {
                         await updateProfile(user, { displayName: profileName });
                         await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                    }
-                    if(profileEmail !== user.email) {
-                        await updateEmail(user, profileEmail);
-                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
-                        setProfileMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
-                    } else {
                         setProfileMsg({type:'success', text:'Profile updated successfully!'});
+                    } else {
+                        setProfileMsg({type:'info', text:'No changes to save.'});
                     }
                 } catch(error) {
-                    if(error.code === 'auth/requires-recent-login') {
-                        setProfileMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
-                    } else {
-                        setProfileMsg({type:'error', text: error.message});
-                    }
+                    setProfileMsg({type:'error', text: error.message});
                 }
             };
 
@@ -1154,7 +1147,17 @@
                                     <form onSubmit={handleUpdateOrgInfo} className="space-y-4 max-w-md">
                                         {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`}>{profileMsg.text}</div>}
                                         <div><label className="block text-sm font-medium">Organization Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                                        <div><label className="block text-sm font-medium">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Email Address</label>
+                                            <input 
+                                                className="w-full p-2 border rounded bg-gray-100 cursor-not-allowed text-gray-600" 
+                                                value={profileEmail} 
+                                                readOnly 
+                                                disabled
+                                                title="Contact support to change email"
+                                            />
+                                            <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
+                                        </div>
                                         <Button type="submit">Update Info</Button>
                                     </form>
                                 </Card>
@@ -1178,6 +1181,7 @@
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
+                                                    {/* HIDE EMAIL: Display Name instead */}
                                                     <div className="text-sm text-gray-500">{r.userName || "User"}</div>
                                                     <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
                                                 </div>
@@ -1204,6 +1208,7 @@
                                                 )}
                                             </div>
                                             
+                                            {/* Show Feedback to Organization */}
                                             {r.feedback && (
                                                 <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
                                                     <div className="flex items-center gap-2 mb-1">
@@ -1248,23 +1253,16 @@
                 e.preventDefault();
                 setInfoMsg({type:'', text:''});
                 try {
+                    // Update Name
                     if(profileName !== userData.displayName) {
                         await updateProfile(user, { displayName: profileName });
                         await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                    }
-                    if(profileEmail !== user.email) {
-                        await updateEmail(user, profileEmail);
-                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
-                        setInfoMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
-                    } else {
                         setInfoMsg({type:'success', text:'Profile updated successfully!'});
+                    } else {
+                        setInfoMsg({type:'info', text:'No changes to save.'});
                     }
                 } catch(error) {
-                    if(error.code === 'auth/requires-recent-login') {
-                        setInfoMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
-                    } else {
-                        setInfoMsg({type:'error', text: error.message});
-                    }
+                    setInfoMsg({type:'error', text: error.message});
                 }
             };
 
@@ -1275,7 +1273,17 @@
                         <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
                             {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
                             <div><label className="block text-sm font-medium text-gray-500">Full Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
-                            <div><label className="block text-sm font-medium text-gray-500">Email Address</label><input className="w-full p-2 border rounded" value={profileEmail} onChange={e=>setProfileEmail(e.target.value)} /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500">Email Address</label>
+                                <input 
+                                    className="w-full p-2 border rounded bg-gray-100 cursor-not-allowed text-gray-600" 
+                                    value={profileEmail} 
+                                    readOnly 
+                                    disabled
+                                    title="Contact support to change email"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Email cannot be changed.</p>
+                            </div>
                             <div><label className="block text-sm font-medium text-gray-500">Account Type</label><Badge color="blue">{userData?.role || 'User'}</Badge></div>
                             <Button type="submit">Update Info</Button>
                         </form>

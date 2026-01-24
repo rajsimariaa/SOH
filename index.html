@@ -143,8 +143,7 @@
             </div>
         );
 
-        // --- SHARED / HELPER COMPONENTS ---
-        
+        // --- TERMS MODAL ---
         function TermsModal({ onClose }) {
             return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
@@ -156,6 +155,15 @@
                             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded p-1 transition-colors"><X size={24} /></button>
                         </div>
                         <div className="p-6 overflow-y-auto text-sm text-gray-700 space-y-6 leading-relaxed">
+                            {/* Contact Information Section Added */}
+                            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                                <h4 className="font-bold text-base text-indigo-900 mb-2">Contact Information</h4>
+                                <div className="space-y-1 text-indigo-800">
+                                    <p><span className="font-semibold">Email:</span> shadesofhue2025@gmail.com</p>
+                                    <p><span className="font-semibold">Phone:</span> +91 9833201718 / +91 80970 86929</p>
+                                </div>
+                            </div>
+
                             <div>
                                 <h4 className="font-bold text-lg text-gray-900 mb-2">Shades of Hue: Official Platform Policies and Guidelines</h4>
                                 <p>These policies govern the conduct of all users, customers, and partnered organizations within the Shades of Hue platform.</p>
@@ -196,7 +204,7 @@
                                     <li><strong>Suspension Protocol:</strong> An organization with a strike will not be able to receive new customer leads and will be suspended for thirty (30) days/one (1) calendar month.</li>
                                     <li><strong>Account Deletion Protocol:</strong> An organization with 3 or more strikes will have their account deleted permanently.</li>
                                     <li><strong>Continuity of Service:</strong> Crucially, the suspension only restricts new leads. The organization must continue and complete all ongoing services, projects, or existing client relationships during the suspension period without interruption.</li>
-                                    <li><strong>Unreponsive Behaviour:</strong> Unresponsive behaviour for 1 or more than 1 week without genuine reason will lead to penalty of 200 per day of unresponsive day</li>
+                                    <li><strong>Unresponsive Behaviour:</strong>Unresponsive behaviour for 1 or more than 1 week without genuine reason will lead to penalty of 200 per day of unresponsive day</li>
                                 </ul>
                             </div>
 
@@ -1108,16 +1116,23 @@
                 e.preventDefault();
                 setProfileMsg({type:'', text:''});
                 try {
-                    // Update Display Name in Auth and Firestore
                     if(profileName !== userData.displayName) {
                         await updateProfile(user, { displayName: profileName });
                         await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
-                        setProfileMsg({type:'success', text:'Profile updated successfully!'});
+                    }
+                    if(profileEmail !== user.email) {
+                        await updateEmail(user, profileEmail);
+                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
+                        setProfileMsg({type:'success', text:'Profile updated. If you changed your email, please login again.'});
                     } else {
-                        setProfileMsg({type:'info', text:'No changes to save.'});
+                        setProfileMsg({type:'success', text:'Profile updated successfully!'});
                     }
                 } catch(error) {
-                    setProfileMsg({type:'error', text: error.message});
+                    if(error.code === 'auth/requires-recent-login') {
+                        setProfileMsg({type:'error', text:'Security: Please log out and log in again to update email.'});
+                    } else {
+                        setProfileMsg({type:'error', text: error.message});
+                    }
                 }
             };
 

@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shades of Hue | Shop</title>
-    
-    <!-- Load Styles (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Configure Modules (Import Map) -->
     <script type="importmap">
     {
       "imports": {
@@ -21,15 +17,7 @@
       }
     }
     </script>
-
-    <!-- Load Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <style>
-        .overflow-y-auto::-webkit-scrollbar { width: 6px; }
-        .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
-        .overflow-y-auto::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
     <div id="shop-root"></div>
@@ -37,17 +25,11 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'react';
         import ReactDOM from 'react-dom/client';
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
-        import { 
-            getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy 
-        } from 'firebase/firestore';
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, getDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
         import { initializeApp } from 'firebase/app';
-        import { 
-            ShoppingBag, ShoppingCart, X, Plus, Minus, ArrowLeft, CreditCard, 
-            Package, CheckCircle, Home, Search, Heart
-        } from 'lucide-react';
+        import { ShoppingBag, ShoppingCart, X, Plus, Minus, ArrowLeft, CreditCard, Package, CheckCircle, Store, Search, User, LogOut, Truck, Settings } from 'lucide-react';
 
-        // --- FIREBASE CONFIGURATION (Matches Main Site) ---
         const firebaseConfig = {
             apiKey: "AIzaSyC907raHdPtNtNxBNLxImf7i-FfPIvglhE",
             authDomain: "sohh-7b016.firebaseapp.com",
@@ -62,359 +44,391 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- MOCK PRODUCT DATA ---
-        const PRODUCTS = [
-            { id: 1, name: "Pride Progress Tote", price: 499, category: "Accessories", image: "https://api.dicebear.com/7.x/icons/svg?seed=tote&backgroundColor=b6e3f4" },
-            { id: 2, name: "Pronoun Pin Set", price: 299, category: "Badges", image: "https://api.dicebear.com/7.x/icons/svg?seed=pins&backgroundColor=ffdfbf" },
-            { id: 3, name: "Community Tee (White)", price: 899, category: "Apparel", image: "https://api.dicebear.com/7.x/icons/svg?seed=tee&backgroundColor=c0aede" },
-            { id: 4, name: "Rainbow Lanyard", price: 199, category: "Accessories", image: "https://api.dicebear.com/7.x/icons/svg?seed=lanyard&backgroundColor=ffd5dc" },
-            { id: 5, name: "Inclusive History Book", price: 650, category: "Books", image: "https://api.dicebear.com/7.x/icons/svg?seed=book&backgroundColor=d1d4f9" },
-            { id: 6, name: "Support Sticker Pack", price: 149, category: "Stationery", image: "https://api.dicebear.com/7.x/icons/svg?seed=stickers&backgroundColor=c1f0c1" },
-        ];
-
         // --- COMPONENTS ---
-
         const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
-            const base = "px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50";
             const variants = {
-                primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200",
+                primary: "bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400",
                 secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50",
                 danger: "bg-rose-600 text-white hover:bg-rose-700",
                 ghost: "text-gray-600 hover:bg-gray-100"
             };
-            return <button onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className}`}>{children}</button>;
+            return <button onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed ${variants[variant]} ${className}`}>{children}</button>;
         };
 
-        function Navbar({ cartCount, setView, user }) {
+        function Navbar({ cartCount, setView, user, role }) {
             return (
                 <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+                    <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                            <a href="index.html" className="text-gray-500 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
-                                <ArrowLeft size={16} /> Back to Main Site
-                            </a>
+                            <a href="index.html" className="text-gray-500 hover:text-indigo-600 flex items-center gap-1 text-sm font-medium"><ArrowLeft size={16} /> Main Site</a>
                             <div className="h-6 w-px bg-gray-300 hidden md:block"></div>
                             <button onClick={() => setView('home')} className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold">S</div>
                                 <span className="font-bold text-xl text-gray-900">Shop</span>
                             </button>
                         </div>
-                        
                         <div className="flex items-center gap-4">
-                            {user && (
-                                <button onClick={() => setView('orders')} className="text-sm font-medium text-gray-600 hover:text-indigo-600 hidden md:block">
-                                    My Orders
+                            {role === 'seller' && <Button variant="ghost" onClick={() => setView('seller-dashboard')}><Store size={18}/> Seller Dashboard</Button>}
+                            {user ? (
+                                <>
+                                    <button onClick={() => setView('orders')} className="text-sm font-medium text-gray-600 hover:text-indigo-600">My Orders</button>
+                                    <Button variant="ghost" onClick={() => signOut(auth)} className="!p-2"><LogOut size={18}/></Button>
+                                </>
+                            ) : (
+                                <Button variant="ghost" onClick={() => setView('login')}>Sign In</Button>
+                            )}
+                            {role !== 'seller' && (
+                                <button onClick={() => setView('cart')} className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full">
+                                    <ShoppingCart size={24} />
+                                    {cartCount > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">{cartCount}</span>}
                                 </button>
                             )}
-                            <button onClick={() => setView('cart')} className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                                <ShoppingCart size={24} />
-                                {cartCount > 0 && (
-                                    <span className="absolute top-0 right-0 w-5 h-5 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
-                                        {cartCount}
-                                    </span>
-                                )}
-                            </button>
                         </div>
                     </div>
                 </nav>
             );
         }
 
-        function ProductCard({ product, onAdd }) {
+        function AuthModule({ setView }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+            const [error, setError] = useState('');
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setError('');
+                try {
+                    if (isLogin) {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } else {
+                        // Buyers only via this portal. Sellers created by Admin.
+                        const cred = await createUserWithEmailAndPassword(auth, email, password);
+                        // FIX: Use setDoc with the uid to ensure rules can read the user doc at /users/{uid}
+                        await setDoc(doc(db, 'users', cred.user.uid), { 
+                            email: email,
+                            displayName: name,
+                            role: 'user', // Explicitly set role for rule checks
+                            createdAt: serverTimestamp()
+                        }); 
+                    }
+                    setView('home');
+                } catch (err) { setError(err.message); }
+            };
+
             return (
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-                    <div className="bg-gray-50 h-48 flex items-center justify-center p-4 relative">
-                        <img src={product.image} alt={product.name} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" />
-                        <span className="absolute top-3 left-3 px-2 py-1 bg-white/90 backdrop-blur text-xs font-bold text-gray-500 rounded-md">
-                            {product.category}
-                        </span>
-                    </div>
-                    <div className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-bold text-gray-900">{product.name}</h3>
-                            <span className="font-bold text-indigo-600">₹{product.price}</span>
+                <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+                    <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+                    {error && <div className="p-3 bg-red-50 text-red-700 rounded mb-4 text-sm">{error}</div>}
+                    <form onSubmit={handleAuth} className="space-y-4">
+                        {!isLogin && <input placeholder="Full Name" className="w-full p-3 border rounded-lg" value={name} onChange={e=>setName(e.target.value)} required />}
+                        <input type="email" placeholder="Email" className="w-full p-3 border rounded-lg" value={email} onChange={e=>setEmail(e.target.value)} required />
+                        <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg" value={password} onChange={e=>setPassword(e.target.value)} required />
+                        <Button type="submit" className="w-full">{isLogin ? 'Sign In' : 'Sign Up'}</Button>
+                    </form>
+                    <p className="text-center mt-4 text-sm text-gray-600">
+                        {isLogin ? "New here? " : "Already have an account? "}
+                        <button onClick={() => setIsLogin(!isLogin)} className="text-indigo-600 font-bold hover:underline">{isLogin ? 'Sign Up' : 'Log In'}</button>
+                    </p>
+                </div>
+            );
+        }
+
+        function SellerDashboard({ user }) {
+            const [products, setProducts] = useState([]);
+            const [orders, setOrders] = useState([]);
+            const [upiId, setUpiId] = useState('');
+            const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', image: '' });
+            const [tab, setTab] = useState('orders');
+
+            useEffect(() => {
+                // Fetch Seller's UPI
+                getDoc(doc(db, 'users', user.uid)).then(d => { if(d.exists()) setUpiId(d.data().upiId || ''); });
+                
+                // Real-time Orders (All orders for now, as products aren't linked to sellers yet in this simple version, 
+                // but in a real app you'd filter by sellerId on items)
+                const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), s => {
+                    setOrders(s.docs.map(d => ({id: d.id, ...d.data()})));
+                });
+
+                // Products
+                const unsubProducts = onSnapshot(collection(db, 'products'), s => {
+                    setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
+                });
+
+                return () => { unsubOrders(); unsubProducts(); };
+            }, [user]);
+
+            const saveUpi = async () => {
+                await updateDoc(doc(db, 'users', user.uid), { upiId });
+                alert("UPI ID Saved!");
+            };
+
+            const addProduct = async (e) => {
+                e.preventDefault();
+                await addDoc(collection(db, 'products'), { ...newProduct, price: Number(newProduct.price), sellerId: user.uid });
+                setNewProduct({ name: '', price: '', category: '', image: '' });
+                alert("Product Added");
+            };
+
+            const updateStatus = async (orderId, status) => {
+                await updateDoc(doc(db, 'orders', orderId), { status });
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto grid grid-cols-4 gap-6">
+                    <div className="col-span-1 bg-white p-4 rounded-xl shadow-sm h-fit">
+                        <h3 className="font-bold mb-4 text-gray-500 uppercase text-xs tracking-wider">Seller Console</h3>
+                        <div className="space-y-2">
+                            <button onClick={()=>setTab('orders')} className={`w-full text-left p-2 rounded ${tab==='orders'?'bg-indigo-50 text-indigo-700':'hover:bg-gray-50'}`}>Orders</button>
+                            <button onClick={()=>setTab('products')} className={`w-full text-left p-2 rounded ${tab==='products'?'bg-indigo-50 text-indigo-700':'hover:bg-gray-50'}`}>Manage Products</button>
+                            <button onClick={()=>setTab('settings')} className={`w-full text-left p-2 rounded ${tab==='settings'?'bg-indigo-50 text-indigo-700':'hover:bg-gray-50'}`}>Settings</button>
                         </div>
-                        <Button onClick={() => onAdd(product)} variant="secondary" className="w-full text-sm mt-2">
-                            <Plus size={16} /> Add to Cart
-                        </Button>
+                    </div>
+                    <div className="col-span-3">
+                        {tab === 'orders' && (
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-bold">Incoming Orders</h2>
+                                {orders.map(order => (
+                                    <div key={order.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <div className="font-bold text-lg">Order #{order.id.slice(0,6)}</div>
+                                                <div className="text-sm text-gray-500">User: {order.userEmail}</div>
+                                                <div className="text-sm text-gray-500">Date: {order.createdAt?.toDate().toLocaleDateString()}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold ${order.status==='placed'?'bg-yellow-100 text-yellow-800':order.status==='shipped'?'bg-blue-100 text-blue-800':order.status==='delivered'?'bg-green-100 text-green-800':'bg-gray-100'}`}>{order.status.toUpperCase()}</span>
+                                                <select className="border rounded p-1 text-sm" value={order.status} onChange={(e)=>updateStatus(order.id, e.target.value)}>
+                                                    <option value="placed">Placed</option>
+                                                    <option value="shipped">Shipped</option>
+                                                    <option value="delivered">Delivered</option>
+                                                    <option value="cancelled">Cancelled</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 p-3 rounded text-sm mb-3">
+                                            <strong>Items:</strong> {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')} <br/>
+                                            <strong>Total:</strong> ₹{order.total} <br/>
+                                            <strong>Shipping:</strong> {order.shippingDetails?.address}, {order.shippingDetails?.city}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {tab === 'products' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-xl border">
+                                    <h3 className="font-bold mb-4">Add New Product</h3>
+                                    <form onSubmit={addProduct} className="grid grid-cols-2 gap-4">
+                                        <input className="border p-2 rounded" placeholder="Name" value={newProduct.name} onChange={e=>setNewProduct({...newProduct, name:e.target.value})} required />
+                                        <input className="border p-2 rounded" type="number" placeholder="Price" value={newProduct.price} onChange={e=>setNewProduct({...newProduct, price:e.target.value})} required />
+                                        <input className="border p-2 rounded" placeholder="Category" value={newProduct.category} onChange={e=>setNewProduct({...newProduct, category:e.target.value})} required />
+                                        <input className="border p-2 rounded" placeholder="Image URL" value={newProduct.image} onChange={e=>setNewProduct({...newProduct, image:e.target.value})} required />
+                                        <Button type="submit" className="col-span-2">Add Product</Button>
+                                    </form>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {products.map(p => (
+                                        <div key={p.id} className="bg-white p-4 rounded border text-center">
+                                            <img src={p.image} className="h-20 mx-auto mb-2" />
+                                            <div className="font-bold">{p.name}</div>
+                                            <div className="text-indigo-600">₹{p.price}</div>
+                                            <button onClick={()=>deleteDoc(doc(db, 'products', p.id))} className="text-red-500 text-xs mt-2 underline">Remove</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {tab === 'settings' && (
+                            <div className="bg-white p-6 rounded-xl border max-w-md">
+                                <h3 className="font-bold mb-4">Payment Settings</h3>
+                                <label className="block text-sm mb-2">Your UPI ID (for receiving payments)</label>
+                                <input className="w-full border p-2 rounded mb-4" value={upiId} onChange={e=>setUpiId(e.target.value)} placeholder="e.g., store@okaxis" />
+                                <Button onClick={saveUpi}>Save Settings</Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
         }
 
-        function Cart({ cart, updateQty, removeFromCart, setView }) {
-            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-            if (cart.length === 0) {
-                return (
-                    <div className="text-center py-20">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
-                            <ShoppingCart size={40} />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900">Your cart is empty</h2>
-                        <p className="text-gray-500 mt-2 mb-6">Looks like you haven't added anything yet.</p>
-                        <Button onClick={() => setView('home')}>Start Shopping</Button>
-                    </div>
-                );
-            }
+        function ProductList({ onAdd }) {
+            const [products, setProducts] = useState([]);
+            useEffect(() => {
+                const unsub = onSnapshot(collection(db, 'products'), s => {
+                    if (s.empty) {
+                        // Fallback static products if DB is empty
+                        setProducts([
+                            { id: '1', name: "Pride Tote", price: 499, category: "Accessories", image: "https://api.dicebear.com/7.x/icons/svg?seed=tote" },
+                            { id: '2', name: "Pin Set", price: 299, category: "Badges", image: "https://api.dicebear.com/7.x/icons/svg?seed=pins" }
+                        ]);
+                    } else {
+                        setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
+                    }
+                });
+                return () => unsub();
+            }, []);
 
             return (
-                <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
-                    <div className="md:col-span-2 space-y-4">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Shopping Cart ({cart.length})</h2>
-                        {cart.map(item => (
-                            <div key={item.id} className="flex gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                <div className="w-20 h-20 bg-gray-50 rounded-lg flex-shrink-0 flex items-center justify-center">
-                                    <img src={item.image} alt={item.name} className="w-12 h-12" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map(p => (
+                        <div key={p.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
+                            <div className="bg-gray-50 h-48 flex items-center justify-center p-4 relative">
+                                <img src={p.image} alt={p.name} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" />
+                                <span className="absolute top-3 left-3 px-2 py-1 bg-white/90 backdrop-blur text-xs font-bold text-gray-500 rounded-md">{p.category}</span>
+                            </div>
+                            <div className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-bold text-gray-900">{p.name}</h3>
+                                    <span className="font-bold text-indigo-600">₹{p.price}</span>
                                 </div>
-                                <div className="flex-grow flex flex-col justify-between">
-                                    <div className="flex justify-between">
-                                        <h3 className="font-bold text-gray-900">{item.name}</h3>
-                                        <button onClick={() => removeFromCart(item.id)} className="text-gray-400 hover:text-red-500"><X size={18} /></button>
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
-                                            <button onClick={() => updateQty(item.id, -1)} className="p-1 hover:bg-white rounded shadow-sm transition-colors" disabled={item.quantity <= 1}><Minus size={14} /></button>
-                                            <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                                            <button onClick={() => updateQty(item.id, 1)} className="p-1 hover:bg-white rounded shadow-sm transition-colors"><Plus size={14} /></button>
-                                        </div>
-                                        <span className="font-bold text-indigo-600">₹{item.price * item.quantity}</span>
-                                    </div>
-                                </div>
+                                <Button onClick={() => onAdd(p)} variant="secondary" className="w-full text-sm mt-2"><Plus size={16} /> Add to Cart</Button>
                             </div>
-                        ))}
-                    </div>
-                    <div className="md:col-span-1">
-                        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm sticky top-24">
-                            <h3 className="font-bold text-gray-900 mb-4">Order Summary</h3>
-                            <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                <div className="flex justify-between"><span>Subtotal</span><span>₹{total}</span></div>
-                                <div className="flex justify-between"><span>Shipping</span><span className="text-green-600">Free</span></div>
-                            </div>
-                            <div className="border-t border-gray-100 pt-4 flex justify-between font-bold text-lg text-gray-900 mb-6">
-                                <span>Total</span>
-                                <span>₹{total}</span>
-                            </div>
-                            <Button onClick={() => setView('checkout')} className="w-full">Proceed to Checkout</Button>
                         </div>
-                    </div>
+                    ))}
                 </div>
             );
         }
 
         function Checkout({ cart, user, clearCart, setView }) {
-            const [loading, setLoading] = useState(false);
             const [formData, setFormData] = useState({ name: user?.displayName || '', address: '', city: '', zip: '' });
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (!user) {
-                    alert("Please log in via the main site to place an order.");
-                    return;
-                }
-                setLoading(true);
                 try {
                     await addDoc(collection(db, 'orders'), {
                         userId: user.uid,
                         userEmail: user.email,
                         items: cart,
-                        total: total,
+                        total,
                         shippingDetails: formData,
                         status: 'placed',
                         createdAt: serverTimestamp()
                     });
                     clearCart();
                     setView('success');
-                } catch (error) {
-                    console.error("Order error:", error);
-                    alert("Failed to place order. " + error.message);
-                } finally {
-                    setLoading(false);
-                }
+                } catch (error) { alert("Failed: " + error.message); }
             };
 
             return (
-                <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <CreditCard className="text-indigo-600" /> Checkout
-                    </h2>
+                <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl border shadow-sm">
+                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><CreditCard /> Checkout</h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                            <input required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                        <input required className="w-full p-2 border rounded" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                        <textarea required className="w-full p-2 border rounded" placeholder="Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                        <div className="flex gap-4">
+                            <input required className="w-full p-2 border rounded" placeholder="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                            <input required className="w-full p-2 border rounded" placeholder="ZIP" value={formData.zip} onChange={e => setFormData({...formData, zip: e.target.value})} />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Address</label>
-                            <textarea required rows="3" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                <input required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP / Postal Code</label>
-                                <input required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.zip} onChange={e => setFormData({...formData, zip: e.target.value})} />
-                            </div>
-                        </div>
-                        
-                        <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                            <div className="flex justify-between font-bold text-gray-900">
-                                <span>Order Total</span>
-                                <span>₹{total}</span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">By placing this order, you agree to our terms of service.</p>
-                        </div>
-
-                        <div className="flex gap-3 pt-4">
-                            <Button variant="secondary" onClick={() => setView('cart')} className="flex-1">Back to Cart</Button>
-                            <Button type="submit" disabled={loading} className="flex-1">
-                                {loading ? 'Processing...' : 'Place Order'}
-                            </Button>
-                        </div>
+                        <div className="bg-gray-50 p-4 rounded mt-4 flex justify-between font-bold"><span>Total</span><span>₹{total}</span></div>
+                        <Button type="submit" className="w-full mt-4">Confirm Order</Button>
                     </form>
-                </div>
-            );
-        }
-
-        function OrderSuccess({ setView }) {
-            return (
-                <div className="text-center py-20 max-w-md mx-auto">
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
-                        <CheckCircle size={40} />
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Order Placed!</h2>
-                    <p className="text-gray-600 mb-8">Thank you for supporting Shades of Hue. We've received your order and will begin processing it shortly.</p>
-                    <div className="space-y-3">
-                        <Button onClick={() => setView('orders')} className="w-full">View My Orders</Button>
-                        <Button variant="ghost" onClick={() => setView('home')} className="w-full">Continue Shopping</Button>
-                    </div>
                 </div>
             );
         }
 
         function OrderHistory({ user, setView }) {
             const [orders, setOrders] = useState([]);
-            
             useEffect(() => {
                 if(!user) return;
                 const q = query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-                const unsub = onSnapshot(q, (snapshot) => {
-                    setOrders(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-                });
+                const unsub = onSnapshot(q, s => setOrders(s.docs.map(d => ({id: d.id, ...d.data()}))));
                 return () => unsub();
             }, [user]);
 
+            const cancelOrder = async (id) => {
+                if(confirm("Cancel this order?")) await updateDoc(doc(db, 'orders', id), { status: 'cancelled' });
+            };
+
             return (
-                <div className="max-w-4xl mx-auto">
-                    <div className="flex items-center gap-4 mb-6">
-                        <button onClick={() => setView('home')} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft size={20}/></button>
-                        <h2 className="text-2xl font-bold text-gray-900">My Orders</h2>
-                    </div>
-                    <div className="space-y-4">
-                        {orders.map(order => (
-                            <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Order #{order.id.slice(0, 8)}</div>
-                                        <div className="text-sm text-gray-500">{order.createdAt?.toDate().toLocaleDateString()}</div>
+                <div className="max-w-4xl mx-auto space-y-4">
+                    <h2 className="text-2xl font-bold mb-4">My Orders</h2>
+                    {orders.map(order => (
+                        <div key={order.id} className="bg-white border rounded-xl p-6 shadow-sm">
+                            <div className="flex justify-between mb-4">
+                                <span className="font-bold">#{order.id.slice(0,8)}</span>
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${order.status==='placed'?'bg-yellow-100 text-yellow-800':order.status==='cancelled'?'bg-red-100 text-red-800':'bg-green-100 text-green-800'}`}>{order.status.toUpperCase()}</span>
+                            </div>
+                            <div className="text-sm text-gray-600 mb-4">{order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold">Total: ₹{order.total}</span>
+                                {order.status === 'placed' && <Button variant="danger" className="!py-1 !text-xs" onClick={() => cancelOrder(order.id)}>Cancel Order</Button>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function Cart({ cart, updateQty, removeFromCart, setView, user }) {
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            return (
+                <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
+                    <div className="md:col-span-2 space-y-4">
+                        {cart.map(item => (
+                            <div key={item.id} className="flex gap-4 bg-white p-4 rounded-xl border">
+                                <img src={item.image} className="w-16 h-16 object-contain" />
+                                <div className="flex-grow">
+                                    <div className="flex justify-between font-bold"><span>{item.name}</span><button onClick={()=>removeFromCart(item.id)}><X size={16}/></button></div>
+                                    <div className="flex justify-between mt-2 items-center">
+                                        <div className="flex items-center gap-2"><button onClick={()=>updateQty(item.id, -1)} disabled={item.quantity<=1}><Minus size={14}/></button><span>{item.quantity}</span><button onClick={()=>updateQty(item.id, 1)}><Plus size={14}/></button></div>
+                                        <span className="text-indigo-600 font-bold">₹{item.price * item.quantity}</span>
                                     </div>
-                                    <Badge color={order.status === 'placed' ? 'green' : 'gray'}>{order.status}</Badge>
-                                </div>
-                                <div className="space-y-2 mb-4 border-t border-b border-gray-100 py-3">
-                                    {order.items.map((item, i) => (
-                                        <div key={i} className="flex justify-between text-sm">
-                                            <span className="text-gray-800">{item.quantity}x {item.name}</span>
-                                            <span className="font-medium">₹{item.price * item.quantity}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex justify-between items-center font-bold text-gray-900">
-                                    <span>Total</span>
-                                    <span>₹{order.total}</span>
                                 </div>
                             </div>
                         ))}
-                        {orders.length === 0 && <div className="text-center py-10 text-gray-500">No past orders found.</div>}
+                    </div>
+                    <div className="md:col-span-1 bg-white p-6 rounded-xl border h-fit">
+                        <div className="flex justify-between font-bold mb-4 text-lg"><span>Total</span><span>₹{total}</span></div>
+                        <Button onClick={() => user ? setView('checkout') : setView('login')} className="w-full">{user ? 'Proceed to Checkout' : 'Login to Checkout'}</Button>
                     </div>
                 </div>
             );
         }
 
-        // --- MAIN APP COMPONENT ---
         function ShopApp() {
-            const [view, setView] = useState('home'); // home, cart, checkout, success, orders
+            const [view, setView] = useState('home');
             const [cart, setCart] = useState([]);
             const [user, setUser] = useState(null);
+            const [role, setRole] = useState('user');
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const unsub = onAuthStateChanged(auth, (u) => {
+                const unsub = onAuthStateChanged(auth, async (u) => {
                     setUser(u);
+                    if (u) {
+                        const snap = await getDoc(doc(db, 'users', u.uid));
+                        if (snap.exists()) setRole(snap.data().role || 'user');
+                    } else { setRole('user'); }
                     setLoading(false);
                 });
                 return () => unsub();
             }, []);
 
-            // Cart Logic
-            const addToCart = (product) => {
-                setCart(prev => {
-                    const existing = prev.find(item => item.id === product.id);
-                    if (existing) {
-                        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-                    }
-                    return [...prev, { ...product, quantity: 1 }];
-                });
-                // Optional: Show toast
-            };
+            const addToCart = (p) => setCart(prev => {
+                const ex = prev.find(i => i.id === p.id);
+                return ex ? prev.map(i => i.id === p.id ? {...i, quantity: i.quantity+1} : i) : [...prev, {...p, quantity: 1}];
+            });
+            const updateQty = (id, d) => setCart(prev => prev.map(i => i.id === id ? {...i, quantity: Math.max(1, i.quantity+d)} : i));
+            const removeFromCart = (id) => setCart(prev => prev.filter(i => i.id !== id));
 
-            const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
-            
-            const updateQty = (id, delta) => {
-                setCart(prev => prev.map(item => {
-                    if (item.id === id) return { ...item, quantity: Math.max(1, item.quantity + delta) };
-                    return item;
-                }));
-            };
-
-            const clearCart = () => setCart([]);
-
-            const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-            if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
+            if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    <Navbar cartCount={cartCount} setView={setView} user={user} />
-                    
-                    <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-                        {view === 'home' && (
-                            <>
-                                <div className="mb-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white text-center shadow-lg">
-                                    <h1 className="text-3xl font-bold mb-2">Shades of Hue Store</h1>
-                                    <p className="opacity-90">Support the community with every purchase.</p>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {PRODUCTS.map(p => (
-                                        <ProductCard key={p.id} product={p} onAdd={addToCart} />
-                                    ))}
-                                </div>
-                            </>
-                        )}
-
-                        {view === 'cart' && <Cart cart={cart} updateQty={updateQty} removeFromCart={removeFromCart} setView={setView} />}
-                        
-                        {view === 'checkout' && <Checkout cart={cart} user={user} clearCart={clearCart} setView={setView} />}
-                        
-                        {view === 'success' && <OrderSuccess setView={setView} />}
-                        
+                    <Navbar cartCount={cart.reduce((s,i)=>s+i.quantity,0)} setView={setView} user={user} role={role} />
+                    <main className="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
+                        {view === 'home' && <ProductList onAdd={addToCart} />}
+                        {view === 'cart' && <Cart cart={cart} updateQty={updateQty} removeFromCart={removeFromCart} setView={setView} user={user} />}
+                        {view === 'checkout' && <Checkout cart={cart} user={user} clearCart={()=>setCart([])} setView={setView} />}
+                        {view === 'success' && <div className="text-center py-20"><CheckCircle size={48} className="mx-auto text-green-500 mb-4"/><h2 className="text-2xl font-bold">Order Placed!</h2><Button className="mt-4" onClick={()=>setView('orders')}>Track Order</Button></div>}
                         {view === 'orders' && <OrderHistory user={user} setView={setView} />}
+                        {view === 'login' && <AuthModule setView={setView} />}
+                        {view === 'seller-dashboard' && role === 'seller' && <SellerDashboard user={user} />}
                     </main>
-
-                    <footer className="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
-                        <p>&copy; {new Date().getFullYear()} Shades of Hue Shop. All rights reserved.</p>
-                    </footer>
                 </div>
             );
         }

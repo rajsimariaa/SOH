@@ -103,12 +103,11 @@
                     if (isLogin) {
                         await signInWithEmailAndPassword(auth, email, password);
                     } else {
-                        // Buyers only via this portal. Sellers created by Admin.
                         const cred = await createUserWithEmailAndPassword(auth, email, password);
                         await setDoc(doc(db, 'users', cred.user.uid), { 
                             email: email,
                             displayName: name,
-                            role: 'user', // Explicitly set role for rule checks
+                            role: 'user', 
                             createdAt: serverTimestamp()
                         }); 
                     }
@@ -142,16 +141,12 @@
             const [tab, setTab] = useState('orders');
 
             useEffect(() => {
-                // Fetch Seller's UPI
                 getDoc(doc(db, 'users', user.uid)).then(d => { if(d.exists()) setUpiId(d.data().upiId || ''); });
                 
-                // Real-time Orders (All orders for now, as products aren't linked to sellers yet in this simple version, 
-                // but in a real app you'd filter by sellerId on items)
                 const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), s => {
                     setOrders(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
 
-                // Products
                 const unsubProducts = onSnapshot(collection(db, 'products'), s => {
                     setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
@@ -210,6 +205,16 @@
                                         <div className="bg-gray-50 p-3 rounded text-sm mb-3">
                                             <strong>Items:</strong> {(order.items || []).map(i => `${i.quantity}x ${i.name}`).join(', ')} <br/>
                                             <strong>Total:</strong> ₹{order.total} <br/>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <strong>Payment:</strong> 
+                                                {order.paymentStatus === 'paid_by_buyer' ? (
+                                                    <span className="text-green-700 font-bold flex items-center gap-1 bg-green-100 px-2 py-0.5 rounded-full text-xs">
+                                                        <CheckCircle size={12} /> Paid by Buyer
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-red-600 font-bold">Pending</span>
+                                                )}
+                                            </div>
                                             <strong>Shipping:</strong> {order.shippingDetails?.address}, {order.shippingDetails?.city}
                                         </div>
                                     </div>
@@ -256,7 +261,6 @@
         function ProductList({ onAdd }) {
             const [products, setProducts] = useState([]);
             useEffect(() => {
-                // Fetch REAL products only. No mock data.
                 const unsub = onSnapshot(collection(db, 'products'), s => {
                     setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
@@ -287,10 +291,42 @@
 
         function Checkout({ cart, user, clearCart, setView }) {
             const [formData, setFormData] = useState({ name: user?.displayName || '', address: '', city: '', zip: '' });
+            const [paymentDetails, setPaymentDetails] = useState([]);
+            const [confirmedPayment, setConfirmedPayment] = useState(false);
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            useEffect(() => {
+                const fetchSellerDetails = async () => {
+                    const sellerMap = {}; 
+                    
+                    cart.forEach(item => {
+                        if (!item.sellerId) return;
+                        if (!sellerMap[item.sellerId]) sellerMap[item.sellerId] = { amount: 0, upiId: 'Not Available' };
+                        sellerMap[item.sellerId].amount += (item.price * item.quantity);
+                    });
+
+                    const details = [];
+                    for (const sellerId of Object.keys(sellerMap)) {
+                        try {
+                            const sellerDoc = await getDoc(doc(db, 'users', sellerId));
+                            if (sellerDoc.exists()) {
+                                sellerMap[sellerId].upiId = sellerDoc.data().upiId || 'Not set by seller';
+                            }
+                        } catch (e) { console.error(e); }
+                        details.push({ sellerId, ...sellerMap[sellerId] });
+                    }
+                    setPaymentDetails(details);
+                };
+                if(cart.length > 0) fetchSellerDetails();
+            }, [cart]);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
+                if (!confirmedPayment) {
+                    alert("Please confirm that you have made the payment(s).");
+                    return;
+                }
+                
                 try {
                     await addDoc(collection(db, 'orders'), {
                         userId: user.uid,
@@ -299,6 +335,7 @@
                         total,
                         shippingDetails: formData,
                         status: 'placed',
+                        paymentStatus: 'paid_by_buyer',
                         createdAt: serverTimestamp()
                     });
                     clearCart();
@@ -309,15 +346,50 @@
             return (
                 <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl border shadow-sm">
                     <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><CreditCard /> Checkout</h2>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <input required className="w-full p-2 border rounded" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                        <textarea required className="w-full p-2 border rounded" placeholder="Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
-                        <div className="flex gap-4">
-                            <input required className="w-full p-2 border rounded" placeholder="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
-                            <input required className="w-full p-2 border rounded" placeholder="ZIP" value={formData.zip} onChange={e => setFormData({...formData, zip: e.target.value})} />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-gray-700 border-b pb-2">Shipping Details</h3>
+                            <input required className="w-full p-2 border rounded" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                            <textarea required className="w-full p-2 border rounded" placeholder="Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                            <div className="flex gap-4">
+                                <input required className="w-full p-2 border rounded" placeholder="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                                <input required className="w-full p-2 border rounded" placeholder="ZIP" value={formData.zip} onChange={e => setFormData({...formData, zip: e.target.value})} />
+                            </div>
                         </div>
-                        <div className="bg-gray-50 p-4 rounded mt-4 flex justify-between font-bold"><span>Total</span><span>₹{total}</span></div>
-                        <Button type="submit" className="w-full mt-4">Confirm Order</Button>
+
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-gray-700 border-b pb-2">Payment</h3>
+                            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                                <p className="text-sm text-indigo-800 mb-3">Please pay the respective amounts to the sellers via UPI:</p>
+                                {paymentDetails.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {paymentDetails.map(detail => (
+                                            <li key={detail.sellerId} className="flex justify-between items-center text-sm font-mono bg-white p-2 rounded border">
+                                                <span>Pay <strong>₹{detail.amount}</strong> to:</span>
+                                                <span className="font-bold select-all bg-gray-100 px-2 py-1 rounded">{detail.upiId}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-gray-500 italic">No seller UPI details found or products have no seller linked.</p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="checkbox" 
+                                    id="payment-confirm" 
+                                    checked={confirmedPayment} 
+                                    onChange={e => setConfirmedPayment(e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
+                                />
+                                <label htmlFor="payment-confirm" className="text-sm text-gray-700 cursor-pointer select-none">
+                                    I confirm that I have made the payment(s) to the above UPI ID(s).
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded mt-4 flex justify-between font-bold text-lg"><span>Total</span><span>₹{total}</span></div>
+                        <Button type="submit" className="w-full mt-4" disabled={!confirmedPayment}>Confirm Order</Button>
                     </form>
                 </div>
             );
@@ -327,11 +399,9 @@
             const [orders, setOrders] = useState([]);
             useEffect(() => {
                 if(!user) return;
-                // REMOVE orderBy from query to avoid failed-precondition error
                 const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
                 const unsub = onSnapshot(q, s => {
                     const data = s.docs.map(d => ({id: d.id, ...d.data()}));
-                    // Sort client-side
                     data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                     setOrders(data);
                 });

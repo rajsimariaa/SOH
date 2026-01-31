@@ -105,7 +105,6 @@
                     } else {
                         // Buyers only via this portal. Sellers created by Admin.
                         const cred = await createUserWithEmailAndPassword(auth, email, password);
-                        // FIX: Use setDoc with the uid to ensure rules can read the user doc at /users/{uid}
                         await setDoc(doc(db, 'users', cred.user.uid), { 
                             email: email,
                             displayName: name,
@@ -257,26 +256,20 @@
         function ProductList({ onAdd }) {
             const [products, setProducts] = useState([]);
             useEffect(() => {
+                // Fetch REAL products only. No mock data.
                 const unsub = onSnapshot(collection(db, 'products'), s => {
-                    if (s.empty) {
-                        // Fallback static products if DB is empty
-                        setProducts([
-                            { id: '1', name: "Pride Tote", price: 499, category: "Accessories", image: "https://api.dicebear.com/7.x/icons/svg?seed=tote" },
-                            { id: '2', name: "Pin Set", price: 299, category: "Badges", image: "https://api.dicebear.com/7.x/icons/svg?seed=pins" }
-                        ]);
-                    } else {
-                        setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
-                    }
+                    setProducts(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
                 return () => unsub();
             }, []);
 
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.length === 0 && <div className="col-span-full text-center text-gray-500 py-10">No products available. Check back soon!</div>}
                     {products.map(p => (
                         <div key={p.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
                             <div className="bg-gray-50 h-48 flex items-center justify-center p-4 relative">
-                                <img src={p.image} alt={p.name} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" />
+                                <img src={p.image} alt={p.name} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" onError={(e) => e.target.src = 'https://placehold.co/400?text=No+Image'} />
                                 <span className="absolute top-3 left-3 px-2 py-1 bg-white/90 backdrop-blur text-xs font-bold text-gray-500 rounded-md">{p.category}</span>
                             </div>
                             <div className="p-4">

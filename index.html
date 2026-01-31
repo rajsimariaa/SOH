@@ -1017,14 +1017,14 @@
                                 <div className="text-sm text-gray-600 mb-2">
                                     <div className="font-medium">Items:</div>
                                     <ul className="list-disc pl-4 text-xs">
-                                        {order.items.map((item, i) => (
+                                        {(order.items || []).map((item, i) => (
                                             <li key={i}>{item.quantity}x {item.name}</li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="flex justify-between text-sm pt-2 border-t">
                                     <span>Total: ₹{order.total}</span>
-                                    <span className="text-gray-400">{order.createdAt?.toDate().toLocaleString()}</span>
+                                    <span className="text-gray-400">{order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString() : 'N/A'}</span>
                                 </div>
                             </div>
                         ))}

@@ -75,7 +75,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Mail, Star, ThumbsUp, Activity
+            BookOpen, Users, Mail, Star, ThumbsUp, Activity, ShoppingBag
         } from 'lucide-react';
 
         // --- FIREBASE CONFIGURATION ---
@@ -204,7 +204,6 @@
                                     <li><strong>Suspension Protocol:</strong> An organization with a strike will not be able to receive new customer leads and will be suspended for thirty (30) days/one (1) calendar month.</li>
                                     <li><strong>Account Deletion Protocol:</strong> An organization with 3 or more strikes will have their account deleted permanently.</li>
                                     <li><strong>Continuity of Service:</strong> Crucially, the suspension only restricts new leads. The organization must continue and complete all ongoing services, projects, or existing client relationships during the suspension period without interruption.</li>
-                                    <li><strong>Unresponsive Behaviour:</strong> Unresponsive behaviour for 1 or more than 1 week without genuine reason will lead to penalty of 200 per day of unresponsive day.</li>
                                 </ul>
                             </div>
 
@@ -232,6 +231,7 @@
             );
         }
 
+        // --- FEEDBACK MODAL ---
         function FeedbackModal({ onClose, onSubmit }) {
             const [rating, setRating] = useState(0);
             const [comment, setComment] = useState('');
@@ -292,6 +292,7 @@
             );
         }
 
+        // --- DECLINE REASON MODAL ---
         function DeclineModal({ onClose, onSubmit }) {
             const [reason, setReason] = useState('');
 
@@ -338,6 +339,7 @@
             );
         }
 
+        // --- FOOTER COMPONENT ---
         function Footer({ onShowTerms }) {
             return (
                 <footer className="bg-white border-t border-gray-200 mt-12 py-8">
@@ -360,6 +362,7 @@
             );
         }
 
+        // --- SHARED COMPONENTS ---
         function Navbar({ user, role, onNavigate, onSignOut, currentView }) {
             const [isOpen, setIsOpen] = useState(false);
             const NavLink = ({ target, label, icon: Icon }) => (
@@ -381,6 +384,10 @@
                             </div>
                             <div className="hidden md:flex items-center space-x-4">
                                 <NavLink target="home" label="Home" icon={Newspaper} />
+                                {/* Added Shop Link */}
+                                <a href="shop.html" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+                                    <ShoppingBag size={16} /> Shop
+                                </a>
                                 {!user ? (
                                     <>
                                         <Button variant="ghost" onClick={() => onNavigate('login')}>Sign In</Button>
@@ -408,6 +415,10 @@
                     {isOpen && (
                         <div className="md:hidden bg-white border-b border-gray-200 px-2 pt-2 pb-3 space-y-1">
                             <NavLink target="home" label="Home" icon={Newspaper} />
+                            {/* Added Shop Link for Mobile */}
+                            <a href="shop.html" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+                                <ShoppingBag size={16} /> Shop
+                            </a>
                             {user && role && <NavLink target="dashboard" label="Dashboard" icon={Briefcase} />}
                             {!user ? (
                                 <div className="flex flex-col gap-2 p-2 mt-2 border-t border-gray-100">
@@ -668,7 +679,7 @@
 
                     // Send verification email immediately for new users
                     await sendEmailVerification(userCredential.user);
-                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard. Please check your Spam Mails folder.");
+                    alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard.");
 
                     onNavigate('home'); 
                 } catch (err) { 
@@ -1532,7 +1543,7 @@
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
                             <p className="text-gray-600 mb-6">
                                 Thanks for joining Shades of Hue! We've sent a verification link to <strong>{currentUser?.email}</strong>. 
-                                Please verify your email to access your dashboard. Please check your spam mails folder
+                                Please verify your email to access your dashboard.
                             </p>
                             <div className="space-y-3">
                                 <Button className="w-full" onClick={() => window.location.reload()}>I've Verified My Email</Button>

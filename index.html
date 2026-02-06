@@ -98,6 +98,29 @@
         const SUPER_ADMINS = ['rajsimariaa@gmail.com', 'krutika3011@gmail.com'];
         const UPI_ID = "rajsimariaa-2@okaxis";
 
+        // --- EMAIL HELPER SYSTEM ---
+        // This writes to a 'mail' collection. Requires Firebase Extension "Trigger Email" to actually send.
+        const sendSystemEmail = async (to, subject, html) => {
+            try {
+                // If 'to' is an array, join it or handle appropriately. 
+                const recipients = Array.isArray(to) ? to : [to];
+                
+                await addDoc(collection(db, 'mail'), {
+                    to: recipients,
+                    message: {
+                        subject: subject,
+                        html: html
+                    },
+                    createdAt: serverTimestamp()
+                });
+                console.log(`Email notification queued for: ${recipients.join(', ')}`);
+                return true;
+            } catch (error) {
+                console.error("Failed to queue email notification:", error);
+                return false;
+            }
+        };
+
         // --- UI COMPONENTS ---
         const Button = ({ children, onClick, variant = 'primary', className = '', type = 'button', disabled = false }) => {
             const baseStyle = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -508,6 +531,16 @@
                     status: 'pending',
                     createdAt: serverTimestamp()
                 });
+                
+                // EMAIL: Notify Super Admins of new Grievance
+                sendSystemEmail(
+                    SUPER_ADMINS,
+                    `New Grievance: ${subject}`,
+                    `<p>A new grievance ticket has been submitted by <strong>${user.email}</strong>.</p>
+                     <p><strong>Subject:</strong> ${subject}</p>
+                     <p><strong>Description:</strong> ${description}</p>`
+                );
+
                 setSubject(''); setDescription(''); 
                 setMsg("Grievance submitted successfully.");
                 setTimeout(() => setMsg(''), 3000);
@@ -660,6 +693,16 @@
                         lastSeen: serverTimestamp() // Set initial lastSeen
                     }); 
 
+                    // EMAIL: Send Welcome Email
+                    sendSystemEmail(
+                        email,
+                        "Welcome to Shades of Hue!",
+                        `<p>Hi ${name},</p>
+                        <p>Welcome to <strong>Shades of Hue</strong>! We are thrilled to have you as part of our community.</p>
+                        <p>Feel free to explore our services and connect with organizations.</p>
+                        <p>Best Regards,<br>The Shades of Hue Team</p>`
+                    );
+
                     // Send verification email immediately for new users
                     await sendEmailVerification(userCredential.user);
                     alert("Account created! We've sent a verification email to " + email + ". Please verify it to access your dashboard.");
@@ -776,8 +819,39 @@
             const toggleStatus = async (uid, status) => { await updateDoc(doc(db, 'users', uid), { isActive: !status }); };
             const deleteUser = async (uid) => { if (confirmingId === uid) { await deleteDoc(doc(db, 'users', uid)); setConfirmingId(null); } else { setConfirmingId(uid); setTimeout(() => setConfirmingId(null), 3000); } };
             
+            // NEW: Inactivity Check
+            const runInactivityCheck = () => {
+                let count = 0;
+                const now = new Date();
+                users.forEach(u => {
+                    const lastSeen = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date(0);
+                    const diffDays = (now - lastSeen) / (1000 * 60 * 60 * 24);
+                    
+                    // Logic: Inactive > 14 days AND has an email
+                    if(diffDays > 14 && u.email) {
+                        sendSystemEmail(
+                            u.email, 
+                            "We miss you on Shades of Hue", 
+                            `<p>Hi ${u.displayName || 'there'},</p>
+                             <p>We noticed you haven't been active for over 2 weeks. Come back and check the latest updates on the platform!</p>
+                             <p><a href="https://sohh-7b016.web.app">Visit Shades of Hue</a></p>`
+                        );
+                        count++;
+                    }
+                });
+                alert(`Inactivity check complete. Emails queued for ${count} users who haven't been seen in 14+ days.`);
+            };
+
             return (
-                <Card className="p-6"><h3 className="text-xl font-bold text-gray-900 mb-6">User Management</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y">{users.map(u => {
+                <Card className="p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 className="text-xl font-bold text-gray-900">User Management</h3>
+                        <Button onClick={runInactivityCheck} variant="secondary" className="!text-xs gap-2">
+                            <Clock size={14}/> Run Inactivity Check (14 Days)
+                        </Button>
+                    </div>
+                    
+                    <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-gray-500"><th>User</th><th>Role</th><th>Online Status</th><th>Last Seen</th><th>Account Status</th><th className="text-right">Actions</th></tr></thead><tbody className="divide-y">{users.map(u => {
                     // Logic for Online Status
                     const now = new Date();
                     const lastSeen = u.lastSeen?.toDate ? u.lastSeen.toDate() : new Date(0);
@@ -837,6 +911,14 @@
                         lastSeen: serverTimestamp(),
                         ...(form.role==='organization'?{description:'New Org', services:[]}:{}) 
                     });
+                    
+                    // EMAIL: Notify New Org of Creation
+                    sendSystemEmail(
+                        form.email, 
+                        "Organization Account Created", 
+                        `<p>Hello ${form.name},</p><p>An administrator has created an organization account for you on Shades of Hue.</p><p>Your password is: <strong>${form.password}</strong></p><p>Please login and change it immediately.</p>`
+                    );
+
                     await signOut(secAuth); // Sign out secondary
                     setMsg({type:'success', text:'Created!'}); setForm({email:'', password:'', name:'', role:'organization'});
                 } catch(err) { setMsg({type:'error', text:err.message}); }
@@ -1084,6 +1166,15 @@
             const handleAcceptToggle = (id) => { 
                 const actionId = `${id}-accepted`; 
                 if (confirmingReqId === actionId) { 
+                    // EMAIL: Notify User
+                    const req = requests.find(r => r.id === id);
+                    if (req) {
+                        sendSystemEmail(
+                            req.userEmail, 
+                            "Request Accepted - Shades of Hue", 
+                            `<p>Good news! Your service request for <strong>${req.serviceName}</strong> has been accepted by <strong>${userData.displayName}</strong>.</p><p>You can now start chatting with them from your dashboard.</p>`
+                        );
+                    }
                     updateRequestStatus(id, 'accepted'); 
                 } else { 
                     setConfirmingReqId(actionId); 
@@ -1102,6 +1193,17 @@
 
             const onDeclineSubmit = async (reason) => {
                 if(declineModalReqId) {
+                    const req = requests.find(r => r.id === declineModalReqId);
+                    if(req) {
+                        // EMAIL: Notify User
+                        sendSystemEmail(
+                            req.userEmail, 
+                            "Request Declined - Shades of Hue", 
+                            `<p>We regret to inform you that your request for <strong>${req.serviceName}</strong> was declined.</p>
+                             <p><strong>Reason:</strong> ${reason}</p>
+                             <p>You can browse other organizations for support.</p>`
+                        );
+                    }
                     await updateRequestStatus(declineModalReqId, 'declined', { declineReason: reason });
                     setDeclineModalReqId(null);
                 }
@@ -1328,7 +1430,33 @@
             const initiateRequest = (org, serviceObj) => { setPaymentModalData({ org, serviceName: typeof serviceObj === 'string' ? serviceObj : serviceObj.name, servicePrice: typeof serviceObj === 'object' && serviceObj.price ? serviceObj.price : null }); };
             
             // HIDE EMAIL: Store userName instead of just email for Org visibility
-            const confirmPayment = async () => { if (!paymentModalData) return; try { await addDoc(collection(db, 'requests'), { userId: user.uid, userEmail: user.email, userName: userData.displayName || 'User', orgId: paymentModalData.org.id, orgName: paymentModalData.org.displayName, serviceName: paymentModalData.serviceName, servicePrice: paymentModalData.servicePrice, status: 'payment_review', createdAt: serverTimestamp() }); setPaymentModalData(null); } catch (e) { } };
+            const confirmPayment = async () => { 
+                if (!paymentModalData) return; 
+                try { 
+                    await addDoc(collection(db, 'requests'), { userId: user.uid, userEmail: user.email, userName: userData.displayName || 'User', orgId: paymentModalData.org.id, orgName: paymentModalData.org.displayName, serviceName: paymentModalData.serviceName, servicePrice: paymentModalData.servicePrice, status: 'payment_review', createdAt: serverTimestamp() }); 
+                    
+                    // EMAIL: Notify Org & Admin
+                    sendSystemEmail(
+                        paymentModalData.org.email, 
+                        "New Service Request Received", 
+                        `<p>You have received a new request from <strong>${userData.displayName || 'A User'}</strong> for the service: <strong>${paymentModalData.serviceName}</strong>.</p>
+                         <p>Please login to your dashboard to review and accept/decline.</p>`
+                    );
+                    
+                    sendSystemEmail(
+                        SUPER_ADMINS,
+                        "Admin Alert: Payment Review Pending",
+                        `<p>A new request requires payment review.</p>
+                         <p><strong>Service:</strong> ${paymentModalData.serviceName}</p>
+                         <p><strong>User:</strong> ${user.email}</p>
+                         <p><strong>Org:</strong> ${paymentModalData.org.displayName}</p>`
+                    );
+
+                    setPaymentModalData(null); 
+                } catch (e) { 
+                    console.error(e);
+                } 
+            };
             
             const cancelRequest = async (id) => {
                 if (confirmingCancelId === id) {

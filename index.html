@@ -50,7 +50,7 @@
             signOut,
             updatePassword,
             updateEmail,
-            verifyBeforeUpdateEmail, // ADDED THIS
+            verifyBeforeUpdateEmail,
             updateProfile,
             sendEmailVerification,
             sendPasswordResetEmail 
@@ -800,6 +800,8 @@
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [name, setName] = useState('');
+            const [identity, setIdentity] = useState('');
+            const [pronouns, setPronouns] = useState('');
             const [error, setError] = useState('');
             const [agreed, setAgreed] = useState(false);
             const [showTerms, setShowTerms] = useState(false);
@@ -818,6 +820,8 @@
                         uid: userCredential.user.uid, 
                         email, 
                         displayName: name, 
+                        identity: identity || 'Prefer not to say',
+                        pronouns: pronouns || 'Prefer not to say',
                         role: 'user', 
                         isActive: true, 
                         termsAccepted: true,
@@ -854,6 +858,38 @@
                             {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
                             <input type="text" placeholder="Full Name" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={name} onChange={(e) => setName(e.target.value)} />
                             <input type="email" placeholder="Email Address" required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={email} onChange={(e) => setEmail(e.target.value)} />
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <select required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700 bg-white" value={identity} onChange={(e) => setIdentity(e.target.value)}>
+                                    <option value="" disabled>Gender/Sexuality</option>
+                                    <option value="Lesbian">Lesbian</option>
+                                    <option value="Gay">Gay</option>
+                                    <option value="Bisexual">Bisexual</option>
+                                    <option value="Transgender">Transgender</option>
+                                    <option value="Queer">Queer</option>
+                                    <option value="Intersex">Intersex</option>
+                                    <option value="Asexual">Asexual</option>
+                                    <option value="Pansexual">Pansexual</option>
+                                    <option value="Non-binary">Non-binary</option>
+                                    <option value="Genderfluid">Genderfluid</option>
+                                    <option value="Agender">Agender</option>
+                                    <option value="Heterosexual/Straight">Heterosexual/Straight</option>
+                                    <option value="Prefer not to say">Prefer not to say</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <select required className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700 bg-white" value={pronouns} onChange={(e) => setPronouns(e.target.value)}>
+                                    <option value="" disabled>Pronouns</option>
+                                    <option value="He/Him">He/Him</option>
+                                    <option value="She/Her">She/Her</option>
+                                    <option value="They/Them">They/Them</option>
+                                    <option value="He/They">He/They</option>
+                                    <option value="She/They">She/They</option>
+                                    <option value="Ze/Zir">Ze/Zir</option>
+                                    <option value="Prefer not to say">Prefer not to say</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
                             <input type="password" placeholder="Password (min 6 chars)" required minLength={6} className="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500" value={password} onChange={(e) => setPassword(e.target.value)} />
                             
                             <div className="flex items-start gap-2 text-sm text-gray-600 px-1">
@@ -1092,7 +1128,14 @@
                         const isOnline = (new Date() - (u.lastSeen?.toDate() || 0)) / 60000 < 2;
                         return (
                             <tr key={u.id} className={!u.isActive ? "bg-amber-50" : ""}>
-                                <td className="py-3"><div className="font-medium">{u.displayName}</div><div className="text-xs text-gray-500">{u.email}</div></td>
+                                <td className="py-3">
+                                    <div className="font-medium">
+                                        {u.displayName}
+                                        {u.pronouns && u.pronouns !== 'Prefer not to say' && <span className="text-xs text-gray-400 font-normal ml-1">({u.pronouns})</span>}
+                                    </div>
+                                    <div className="text-xs text-gray-500">{u.email}</div>
+                                    {u.identity && u.identity !== 'Prefer not to say' && <div className="text-[10px] text-indigo-500 mt-0.5 font-medium">{u.identity}</div>}
+                                </td>
                                 <td className="capitalize"><Badge color={u.role==='admin'?'purple':u.role==='organization'?'blue':'gray'}>{u.role}</Badge></td>
                                 <td>{isOnline?<span className="text-green-600 text-xs font-bold">Online</span>:<span className="text-gray-400 text-xs">Offline</span>}</td>
                                 <td className="text-xs text-gray-500">{u.lastSeen?.toDate ? u.lastSeen.toDate().toLocaleString() : 'Never'}</td>
@@ -1136,7 +1179,7 @@
         }
 
         function AdminCreateUser() {
-            const [form, setForm] = useState({email:'', password:'', name:'', role:'organization'});
+            const [form, setForm] = useState({email:'', password:'', name:'', role:'organization', identity:'', pronouns:''});
             const [msg, setMsg] = useState({type:'', text:''});
             const handleCreate = async (e) => {
                 e.preventDefault(); setMsg({type:'info', text:'Creating...'});
@@ -1148,6 +1191,8 @@
                         uid: cred.user.uid, 
                         email: form.email, 
                         displayName: form.name, 
+                        identity: form.identity || 'Prefer not to say',
+                        pronouns: form.pronouns || 'Prefer not to say',
                         role: form.role, 
                         isActive: true, 
                         createdAt: serverTimestamp(), 
@@ -1158,16 +1203,49 @@
                     // EMAIL: Notify New Org of Creation
                     sendSystemEmail(
                         form.email, 
-                        "Organization Account Created", 
-                        `<p>Hello ${form.name},</p><p>An administrator has created an organization account for you on Shades of Hue.</p><p>Your password is: <strong>${form.password}</strong></p><p>Please login and change it immediately.</p>`
+                        "Account Created - Shades of Hue", 
+                        `<p>Hello ${form.name},</p><p>An administrator has created an account for you on Shades of Hue.</p><p>Your password is: <strong>${form.password}</strong></p><p>Please login and change it immediately.</p>`
                     );
 
                     await signOut(secAuth); // Sign out secondary
-                    setMsg({type:'success', text:'Created!'}); setForm({email:'', password:'', name:'', role:'organization'});
+                    setMsg({type:'success', text:'Created!'}); setForm({email:'', password:'', name:'', role:'organization', identity:'', pronouns:''});
                 } catch(err) { setMsg({type:'error', text:err.message}); }
             };
             return (
-                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2"><label className="flex items-center gap-2"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label></div><input className="w-full p-2 border rounded" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /><input className="w-full p-2 border rounded" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border rounded" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
+                <Card className="p-8 max-w-xl mx-auto"><h3 className="text-xl font-bold mb-6">Create Account</h3><form onSubmit={handleCreate} className="space-y-4">{msg.text && <div className={`p-2 text-sm rounded ${msg.type==='error'?'bg-red-50 text-red-700':'bg-green-50 text-green-700'}`}>{msg.text}</div>}<div className="flex gap-4 mb-2"><label className="flex items-center gap-2"><input type="radio" checked={form.role==='organization'} onChange={()=>setForm({...form, role:'organization'})} /> Org</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='admin'} onChange={()=>setForm({...form, role:'admin'})} /> Admin</label><label className="flex items-center gap-2"><input type="radio" checked={form.role==='user'} onChange={()=>setForm({...form, role:'user'})} /> User</label></div><input className="w-full p-2 border rounded" placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required />
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <select className="w-full p-2 border rounded text-gray-700 bg-white" value={form.identity} onChange={e=>setForm({...form, identity:e.target.value})}>
+                        <option value="" disabled>Gender/Sexuality</option>
+                        <option value="Lesbian">Lesbian</option>
+                        <option value="Gay">Gay</option>
+                        <option value="Bisexual">Bisexual</option>
+                        <option value="Transgender">Transgender</option>
+                        <option value="Queer">Queer</option>
+                        <option value="Intersex">Intersex</option>
+                        <option value="Asexual">Asexual</option>
+                        <option value="Pansexual">Pansexual</option>
+                        <option value="Non-binary">Non-binary</option>
+                        <option value="Genderfluid">Genderfluid</option>
+                        <option value="Agender">Agender</option>
+                        <option value="Heterosexual/Straight">Heterosexual/Straight</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <select className="w-full p-2 border rounded text-gray-700 bg-white" value={form.pronouns} onChange={e=>setForm({...form, pronouns:e.target.value})}>
+                        <option value="" disabled>Pronouns</option>
+                        <option value="He/Him">He/Him</option>
+                        <option value="She/Her">She/Her</option>
+                        <option value="They/Them">They/Them</option>
+                        <option value="He/They">He/They</option>
+                        <option value="She/They">She/They</option>
+                        <option value="Ze/Zir">Ze/Zir</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <input className="w-full p-2 border rounded" placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /><input className="w-full p-2 border rounded" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /><Button type="submit" className="w-full">Create</Button></form></Card>
             );
         }
 
@@ -1718,10 +1796,16 @@
             const [msg, setMsg] = useState({ type: '', text: '' });
             const [profileName, setProfileName] = useState(userData?.displayName || '');
             const [profileEmail, setProfileEmail] = useState(user.email || '');
+            const [profileIdentity, setProfileIdentity] = useState(userData?.identity || '');
+            const [profilePronouns, setProfilePronouns] = useState(userData?.pronouns || '');
             const [infoMsg, setInfoMsg] = useState({ type: '', text: '' });
 
             useEffect(() => { 
-                if(userData) setProfileName(userData.displayName || '');
+                if(userData) {
+                    setProfileName(userData.displayName || '');
+                    setProfileIdentity(userData.identity || '');
+                    setProfilePronouns(userData.pronouns || '');
+                }
                 if(user) setProfileEmail(user.email);
             }, [userData, user]);
 
@@ -1732,10 +1816,14 @@
                 setInfoMsg({type:'', text:''});
                 try {
                     let changesMade = false;
-                    // Update Name
-                    if(profileName !== userData.displayName) {
+                    // Update Name, Identity, Pronouns
+                    if(profileName !== userData.displayName || profileIdentity !== userData.identity || profilePronouns !== userData.pronouns) {
                         await updateProfile(user, { displayName: profileName });
-                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
+                        await updateDoc(doc(db, 'users', user.uid), { 
+                            displayName: profileName,
+                            identity: profileIdentity,
+                            pronouns: profilePronouns
+                        });
                         changesMade = true;
                     }
                     
@@ -1767,6 +1855,44 @@
                         <form onSubmit={handleUpdateInfo} className="space-y-4 max-w-md">
                             {infoMsg.text && <div className={`p-3 text-sm rounded-lg ${infoMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{infoMsg.text}</div>}
                             <div><label className="block text-sm font-medium text-gray-500">Full Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-500">Gender/Sexuality</label>
+                                    <select className="w-full p-2 border rounded bg-white text-gray-900" value={profileIdentity} onChange={(e) => setProfileIdentity(e.target.value)}>
+                                        <option value="" disabled>Select</option>
+                                        <option value="Lesbian">Lesbian</option>
+                                        <option value="Gay">Gay</option>
+                                        <option value="Bisexual">Bisexual</option>
+                                        <option value="Transgender">Transgender</option>
+                                        <option value="Queer">Queer</option>
+                                        <option value="Intersex">Intersex</option>
+                                        <option value="Asexual">Asexual</option>
+                                        <option value="Pansexual">Pansexual</option>
+                                        <option value="Non-binary">Non-binary</option>
+                                        <option value="Genderfluid">Genderfluid</option>
+                                        <option value="Agender">Agender</option>
+                                        <option value="Heterosexual/Straight">Heterosexual/Straight</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-500">Pronouns</label>
+                                    <select className="w-full p-2 border rounded bg-white text-gray-900" value={profilePronouns} onChange={(e) => setProfilePronouns(e.target.value)}>
+                                        <option value="" disabled>Select</option>
+                                        <option value="He/Him">He/Him</option>
+                                        <option value="She/Her">She/Her</option>
+                                        <option value="They/Them">They/Them</option>
+                                        <option value="He/They">He/They</option>
+                                        <option value="She/They">She/They</option>
+                                        <option value="Ze/Zir">Ze/Zir</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-500">Email Address</label>
                                 <input 

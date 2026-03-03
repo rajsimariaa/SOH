@@ -80,6 +80,18 @@
             BookOpen, Users, Mail, Star, ThumbsUp, Activity, Server
         } from 'lucide-react';
 
+        // --- MCP CONFIGURATION (Integrated) ---
+        // Configuration for Model Context Protocol (VS Code / Cursor Integration)
+        const MCP_CONFIG = {
+            "servers": {
+                "SOH Docs": {
+                    "type": "sse",
+                    "url": "https://gitmcp.io/rajsimariaa/SOH"
+                }
+            }
+        };
+        console.log("MCP Config Loaded:", MCP_CONFIG);
+
         // --- EMAILJS CONFIGURATION (PASTE KEYS HERE) ---
         // 1. Sign up at https://emailjs.com/
         // 2. Add 'Gmail' service -> Copy Service ID
@@ -1106,7 +1118,6 @@
             };
 
             const runInactivityCheck = () => {
-                // ... existing logic ...
                 let count = 0;
                 users.forEach(u => {
                     const diffDays = (new Date() - (u.lastSeen?.toDate() || 0)) / (864e5);
@@ -1197,7 +1208,7 @@
                         isActive: true, 
                         createdAt: serverTimestamp(), 
                         lastSeen: serverTimestamp(),
-                        ...(form.role==='organization'?{description:'New Org', services:[]}:{}) 
+                        ...(form.role==='organization'?{description:'New Org', services:[], isAvailable: true}:{}) 
                     });
                     
                     // EMAIL: Notify New Org of Creation
@@ -1562,6 +1573,7 @@
             const [profileName, setProfileName] = useState(userData?.displayName || '');
             const [profileEmail, setProfileEmail] = useState(user.email || '');
             const [profileMsg, setProfileMsg] = useState({type:'', text:''});
+            const [isAvailable, setIsAvailable] = useState(userData?.isAvailable ?? true); // NEW: Availability state
 
             // Password Edit States
             const [pass, setPass] = useState('');
@@ -1572,6 +1584,7 @@
                 if(userData) {
                     setData(d => ({...d, desc: userData.description||'', services: userData.services||[] }));
                     setProfileName(userData.displayName || '');
+                    setIsAvailable(userData.isAvailable ?? true); // NEW: Sync availability from DB
                 } 
                 if(user) setProfileEmail(user.email);
             }, [userData, user]);
@@ -1586,6 +1599,18 @@
 
             const saveProfile = async () => { await updateDoc(doc(db, 'users', user.uid), { description: data.desc, services: data.services }); setIsEditing(false); };
             
+            // NEW: Toggle Availability Function
+            const toggleAvailability = async () => {
+                const newVal = !isAvailable;
+                setIsAvailable(newVal);
+                try {
+                    await updateDoc(doc(db, 'users', user.uid), { isAvailable: newVal });
+                } catch (error) {
+                    console.error("Error updating availability:", error);
+                    setIsAvailable(!newVal); // revert on error
+                }
+            };
+
             const handleAcceptToggle = async (id) => { 
                 const actionId = `${id}-accepted`; 
                 if (confirmingReqId === actionId) { 
@@ -1693,6 +1718,22 @@
                     <div className="lg:col-span-3">
                         {tab === 'profile' && (
                             <div className="space-y-6">
+                                {/* NEW: Availability Toggle Card */}
+                                <Card className="p-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-gray-900">Availability Status</h2>
+                                            <p className="text-sm text-gray-500 mt-1">Determine if users can send you new messages or requests.</p>
+                                        </div>
+                                        <button 
+                                            onClick={toggleAvailability} 
+                                            className={`px-5 py-2 rounded-full font-bold text-sm transition-all border shadow-sm ${isAvailable ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}`}
+                                        >
+                                            {isAvailable ? '🟢 Available' : '🔴 Unavailable'}
+                                        </button>
+                                    </div>
+                                </Card>
+
                                 <Card className="p-6">
                                     <div className="flex justify-between mb-6"><h2 className="text-xl font-bold">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
                                     <div className="space-y-4"><div><label className="block text-sm font-medium mb-1">About</label>{isEditing ? <textarea className="w-full p-2 border rounded" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 p-3 rounded text-gray-700">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 rounded border"><input className="w-full p-2 border rounded text-sm" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border rounded text-sm" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border rounded text-sm" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
@@ -2017,7 +2058,52 @@
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('find_support')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='find_support'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Search size={18} /> Find Support</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><CheckCircle size={18} /> My Requests</button><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Settings size={18} /> Profile</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
                     <div className="lg:col-span-3">
-                        {tab === 'find_support' && (<div className="space-y-6"><div className="flex flex-col md:flex-row justify-between items-center gap-4"><h2 className="text-2xl font-bold text-gray-900">Find Support</h2><input className="w-full md:w-64 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div><div className="grid gap-6">{filteredOrgs.map(org => (<Card key={org.id} className="p-6"><div className="flex items-start justify-between"><div><h3 className="text-xl font-bold text-gray-900">{org.displayName}</h3><p className="text-gray-500 text-sm mt-1">{org.description || "No description."}</p></div><div className="flex flex-col gap-2"><div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 self-end"><Building2 size={24} /></div><Button variant="secondary" onClick={() => startChat(org)} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button></div></div><div className="mt-6"><h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4><div className="flex flex-wrap gap-2">{org.services?.map((s, i) => <button key={i} onClick={()=>initiateRequest(org, s)} className="px-3 py-2 bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"><span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>{s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}</button>)}</div></div></Card>))}</div></div>)}
+                        {tab === 'find_support' && (
+                            <div className="space-y-6">
+                                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                    <h2 className="text-2xl font-bold text-gray-900">Find Support</h2>
+                                    <input className="w-full md:w-64 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
+                                </div>
+                                <div className="grid gap-6">
+                                    {filteredOrgs.map(org => {
+                                        const isOrgAvailable = org.isAvailable !== false; // Default to true if undefined
+                                        return (
+                                            <Card key={org.id} className={`p-6 transition-all duration-300 ${!isOrgAvailable ? 'opacity-75 bg-gray-50' : ''}`}>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <div className="flex items-center gap-3">
+                                                            <h3 className="text-xl font-bold text-gray-900">{org.displayName}</h3>
+                                                            <Badge color={isOrgAvailable ? 'green' : 'red'}>{isOrgAvailable ? 'Available' : 'Unavailable'}</Badge>
+                                                        </div>
+                                                        <p className="text-gray-500 text-sm mt-2">{org.description || "No description provided."}</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className={`p-2 rounded-lg self-end ${isOrgAvailable ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}><Building2 size={24} /></div>
+                                                        <Button variant="secondary" onClick={() => startChat(org)} disabled={!isOrgAvailable} className="!py-1 !px-2 !text-xs gap-1"><MessageCircle size={14}/> Message</Button>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-6">
+                                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Services</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {org.services?.map((s, i) => (
+                                                            <button 
+                                                                key={i} 
+                                                                onClick={()=>initiateRequest(org, s)} 
+                                                                disabled={!isOrgAvailable} 
+                                                                className="px-3 py-2 bg-gray-100 hover:bg-indigo-600 hover:text-white disabled:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 rounded-lg text-sm font-medium transition-colors text-left flex flex-col items-start gap-1"
+                                                            >
+                                                                <span className="font-bold">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}</span>
+                                                                {s.description && <span className="text-xs opacity-75 font-normal">{s.description}</span>}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                         {tab === 'requests' && (<Card className="p-6"><h3 className="font-bold text-gray-900 mb-4">My Requests</h3><div className="space-y-3">{myRequests.map(r => (
                             <div key={r.id} className="p-4 bg-gray-50 rounded border text-sm flex flex-col gap-3">
                                 <div className="flex justify-between items-center">

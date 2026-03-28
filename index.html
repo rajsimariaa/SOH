@@ -78,7 +78,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Mail, Star, ThumbsUp, Activity, Server, Megaphone
+            BookOpen, Users, Mail, Star, ThumbsUp, Activity, Server, Megaphone, Award
         } from 'lucide-react';
 
         // --- MCP CONFIGURATION (Integrated) ---
@@ -1176,7 +1176,10 @@
                                     <div className="text-xs text-gray-500">{u.email}</div>
                                     {u.identity && u.identity !== 'Prefer not to say' && <div className="text-[10px] text-indigo-500 mt-0.5 font-medium">{u.identity}</div>}
                                 </td>
-                                <td className="capitalize"><Badge color={u.role==='admin'?'purple':u.role==='organization'?'blue':u.role==='freelancer'?'yellow':'gray'}>{u.role}</Badge></td>
+                                <td className="capitalize">
+                                    <Badge color={u.role==='admin'?'purple':u.role==='organization'?'blue':u.role==='freelancer'?'yellow':'gray'}>{u.role}</Badge>
+                                    {u.role === 'organization' && <div className="text-[10px] text-gray-500 mt-1 font-medium flex items-center gap-1"><Award size={10}/> {u.completedRequests || 0} Completions</div>}
+                                </td>
                                 <td>{isOnline?<span className="text-green-600 text-xs font-bold">Online</span>:<span className="text-gray-400 text-xs">Offline</span>}</td>
                                 <td className="text-xs text-gray-500">{u.lastSeen?.toDate ? u.lastSeen.toDate().toLocaleString() : 'Never'}</td>
                                 <td>{u.isActive?<span className="text-green-600 flex items-center gap-1"><CheckCircle size={14}/> Active</span>:<span className="text-amber-600 flex items-center gap-1"><Clock size={14}/> Pending</span>}</td>
@@ -1235,6 +1238,7 @@
                         extraData.description = 'New Org';
                         extraData.services = [];
                         extraData.isAvailable = true;
+                        extraData.completedRequests = 0; // Tracking
                     } else if (form.role === 'freelancer') {
                         // Generate a unique 6-character referral code (e.g. FL-X79K2P)
                         extraData.referralCode = 'FL-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -1561,6 +1565,305 @@
             );
         }
 
+        // --- SUB-COMPONENTS FOR ORG DASHBOARD ---
+        function OrgChatList({ user, onSelectChat }) {
+            const [chats, setChats] = useState([]);
+            useEffect(() => {
+                const q = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
+                const unsub = onSnapshot(q, (s) => {
+                    const chatData = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    chatData.sort((a, b) => {
+                        const timeA = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : 0;
+                        const timeB = b.lastMessageTime?.toMillis ? b.lastMessageTime.toMillis() : 0;
+                        return timeB - timeA;
+                    });
+                    setChats(chatData);
+                }, (error) => console.error("Org Chat List Error:", error));
+                return () => unsub();
+            }, [user.uid]);
+            
+            const getPartnerName = (chat) => { 
+                const partnerId = chat.participants.find(p => p !== user.uid); 
+                const pData = chat.participantData?.[partnerId];
+                return pData?.name || "User"; 
+            };
+            
+            return (<Card className="p-6"><h3 className="font-bold mb-4">Conversations</h3><div className="space-y-2">{chats.length > 0 ? chats.map(chat => (<div key={chat.id} onClick={() => onSelectChat(chat.id)} className="p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors"><div className="flex justify-between items-start"><span className="font-bold text-gray-900">{getPartnerName(chat)}</span><span className="text-xs text-gray-400">{chat.lastMessageTime?.toDate ? chat.lastMessageTime.toDate().toLocaleDateString() : ''}</span></div><p className="text-sm text-gray-600 truncate mt-1">{chat.lastMessage || "No messages yet"}</p></div>)) : <p className="text-gray-500 text-center py-4">No active conversations.</p>}</div></Card>);
+        }
+
+        // --- ORG DASHBOARD ---
+        function OrgDashboard({ user, userData }) {
+            const [tab, setTab] = useState('profile');
+            const [isEditing, setIsEditing] = useState(false);
+            const [data, setData] = useState({ desc: userData?.description||'', services: userData?.services||[], newServiceName:'', newServicePrice: '', newServiceDesc: '' });
+            const [requests, setRequests] = useState([]);
+            const [activeChatId, setActiveChatId] = useState(null);
+            
+            const [confirmingReqId, setConfirmingReqId] = useState(null);
+            const [declineModalReqId, setDeclineModalReqId] = useState(null);
+
+            const [profileName, setProfileName] = useState(userData?.displayName || '');
+            const [profileEmail, setProfileEmail] = useState(user.email || '');
+            const [profileMsg, setProfileMsg] = useState({type:'', text:''});
+            const [isAvailable, setIsAvailable] = useState(userData?.isAvailable ?? true);
+
+            const [pass, setPass] = useState('');
+            const [confirm, setConfirm] = useState('');
+            const [passMsg, setPassMsg] = useState({type:'', text:''});
+
+            useEffect(() => { 
+                if(userData) {
+                    setData(d => ({...d, desc: userData.description||'', services: userData.services||[] }));
+                    setProfileName(userData.displayName || '');
+                    setIsAvailable(userData.isAvailable ?? true);
+                } 
+                if(user) setProfileEmail(user.email);
+            }, [userData, user]);
+
+            useEffect(() => {
+                const unsub = onSnapshot(query(collection(db, 'requests'), where('orgId', '==', user.uid)), (snapshot) => {
+                    const allRequests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setRequests(allRequests.filter(r => r.status !== 'payment_review'));
+                }, (e)=>console.error("Org Requests Error:", e)); 
+                return () => unsub();
+            }, [user.uid]);
+
+            const saveProfile = async () => { await updateDoc(doc(db, 'users', user.uid), { description: data.desc, services: data.services }); setIsEditing(false); };
+            
+            const toggleAvailability = async () => {
+                const newVal = !isAvailable;
+                setIsAvailable(newVal);
+                try {
+                    await updateDoc(doc(db, 'users', user.uid), { isAvailable: newVal });
+                } catch (error) {
+                    console.error("Error updating availability:", error);
+                    setIsAvailable(!newVal);
+                }
+            };
+
+            const handleAcceptToggle = async (id) => { 
+                const actionId = `${id}-accepted`; 
+                if (confirmingReqId === actionId) { 
+                    const req = requests.find(r => r.id === id);
+                    if (req && req.userEmail) {
+                        await sendSystemEmail(
+                            req.userEmail, 
+                            "Request Accepted - Shades of Hue", 
+                            `<p>Good news! Your service request for <strong>${req.serviceName}</strong> has been accepted by <strong>${userData.displayName}</strong>.</p><p>You can now start chatting with them from your dashboard.</p>`
+                        );
+                    }
+                    updateRequestStatus(id, 'accepted'); 
+                } else { 
+                    setConfirmingReqId(actionId); 
+                    setTimeout(() => setConfirmingReqId(null), 3000); 
+                } 
+            };
+
+            const updateRequestStatus = async (id, status, extraData = {}) => {
+                try {
+                    await updateDoc(doc(db, 'requests', id), { status, ...extraData });
+                    setConfirmingReqId(null);
+                } catch (e) {
+                    console.error("Error updating status:", e);
+                }
+            };
+
+            const onDeclineSubmit = async (reason) => {
+                if(declineModalReqId) {
+                    const req = requests.find(r => r.id === declineModalReqId);
+                    if(req && req.userEmail) {
+                        await sendSystemEmail(
+                            req.userEmail, 
+                            "Request Declined - Shades of Hue", 
+                            `<p>We regret to inform you that your request for <strong>${req.serviceName}</strong> was declined.</p>
+                             <p><strong>Reason:</strong> ${reason}</p>
+                             <p>You can browse other organizations for support.</p>`
+                        );
+                    }
+                    await updateRequestStatus(declineModalReqId, 'declined', { declineReason: reason });
+                    setDeclineModalReqId(null);
+                }
+            };
+
+            const handleStatusChange = async (id, newStatus) => {
+                const req = requests.find(r => r.id === id);
+                const oldStatus = req ? req.status : null;
+                
+                await updateRequestStatus(id, newStatus);
+                
+                // NEW: Update ranking score if transitioning to or from 'completed'
+                if (oldStatus && oldStatus !== newStatus) {
+                    let scoreChange = 0;
+                    if (newStatus === 'completed') scoreChange = 1;
+                    else if (oldStatus === 'completed') scoreChange = -1;
+                    
+                    if (scoreChange !== 0) {
+                        try {
+                            await updateDoc(doc(db, 'users', user.uid), {
+                                completedRequests: increment(scoreChange)
+                            });
+                        } catch(e) { console.error("Error updating ranking score", e); }
+                    }
+                }
+            };
+
+            const handleAddService = () => { if(data.newServiceName) { const newServiceObj = { name: data.newServiceName, price: data.newServicePrice, description: data.newServiceDesc }; setData({ ...data, services: [...data.services, newServiceObj], newServiceName: '', newServicePrice: '', newServiceDesc: '' }); } };
+
+            const handleUpdateOrgInfo = async (e) => {
+                e.preventDefault();
+                setProfileMsg({type:'', text:''});
+                try {
+                    let changesMade = false;
+                    if(profileName !== userData.displayName) {
+                        await updateProfile(user, { displayName: profileName });
+                        await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
+                        changesMade = true;
+                    }
+                    if(profileEmail !== user.email) {
+                        await verifyBeforeUpdateEmail(user, profileEmail);
+                        await updateDoc(doc(db, 'users', user.uid), { email: profileEmail });
+                        setProfileMsg({type:'success', text:`Verification email sent to ${profileEmail}. Please verify to complete the change.`});
+                    } else if (changesMade) {
+                        setProfileMsg({type:'success', text:'Profile info updated successfully!'});
+                    } else {
+                        setProfileMsg({type:'info', text:'No changes detected.'});
+                    }
+                } catch(error) {
+                    if(error.code === 'auth/requires-recent-login') {
+                        setProfileMsg({type:'error', text:'Security: For your protection, please log out and log in again to change your email.'});
+                    } else {
+                        setProfileMsg({type:'error', text: error.message});
+                    }
+                }
+            };
+
+            const handleUpdatePassword = async (e) => {
+                e.preventDefault();
+                if (pass !== confirm) { setPassMsg({ type: 'error', text: 'Passwords do not match' }); return; }
+                try {
+                    await updatePassword(user, pass);
+                    setPassMsg({ type: 'success', text: 'Password updated successfully!' });
+                    setPass(''); setConfirm('');
+                } catch (error) {
+                    setPassMsg({ type: 'error', text: error.code === 'auth/requires-recent-login' ? 'Security: Please log out and login again to update password.' : error.message });
+                }
+            };
+
+            return (
+                <div className="grid lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1 space-y-4"><Card className="p-4"><h3 className="font-bold text-gray-900 mb-4 px-2">Menu</h3><div className="space-y-1"><button onClick={()=>setTab('profile')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='profile'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><Building2 size={18} /> Profile</button><button onClick={()=>setTab('requests')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='requests'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><CheckCircle size={18} /> Requests</button><button onClick={()=>setTab('messages')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='messages'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><MessageCircle size={18} /> Messages</button><button onClick={()=>setTab('grievances')} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab==='grievances'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'}`}><AlertTriangle size={18} /> Grievances</button></div></Card></div>
+                    <div className="lg:col-span-3">
+                        {tab === 'profile' && (
+                            <div className="space-y-6">
+                                <Card className="p-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-gray-900">Availability Status</h2>
+                                            <p className="text-sm text-gray-500 mt-1">Determine if users can send you new messages or requests.</p>
+                                        </div>
+                                        <button 
+                                            onClick={toggleAvailability} 
+                                            className={`px-5 py-2 rounded-full font-bold text-sm transition-all border shadow-sm ${isAvailable ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}`}
+                                        >
+                                            {isAvailable ? '🟢 Available' : '🔴 Unavailable'}
+                                        </button>
+                                    </div>
+                                </Card>
+
+                                <Card className="p-6">
+                                    <div className="flex justify-between mb-6"><h2 className="text-xl font-bold">Services & Description</h2><Button variant={isEditing?'success':'secondary'} onClick={isEditing?saveProfile:()=>setIsEditing(true)} className="!py-1 !text-sm">{isEditing?'Save':'Edit'}</Button></div>
+                                    <div className="space-y-4"><div><label className="block text-sm font-medium mb-1">About</label>{isEditing ? <textarea className="w-full p-2 border rounded" rows={3} value={data.desc} onChange={e=>setData({...data, desc:e.target.value})} /> : <p className="bg-gray-50 p-3 rounded text-gray-700">{data.desc || "No description."}</p>}</div><div><label className="block text-sm font-medium mb-1">Services</label><div className="flex flex-wrap gap-2 mb-2">{data.services.map((s,i) => <span key={i} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs flex items-center gap-1">{typeof s === 'string' ? s : s.name} {s.price && `(₹${s.price})`}{isEditing && <button onClick={()=>{const n=[...data.services];n.splice(i,1);setData({...data, services:n})}}><X size={12}/></button>}</span>)}</div>{isEditing && <div className="flex flex-col gap-2 mt-2 p-3 bg-gray-50 rounded border"><input className="w-full p-2 border rounded text-sm" placeholder="Service Name" value={data.newServiceName} onChange={e=>setData({...data, newServiceName:e.target.value})} /><div className="flex gap-2"><input className="w-24 p-2 border rounded text-sm" type="number" placeholder="Price (₹)" value={data.newServicePrice} onChange={e=>setData({...data, newServicePrice:e.target.value})} /><input className="flex-grow p-2 border rounded text-sm" placeholder="Short Description" value={data.newServiceDesc} onChange={e=>setData({...data, newServiceDesc:e.target.value})} /></div><Button variant="secondary" onClick={handleAddService} className="w-full text-xs">Add Service</Button></div>}</div></div>
+                                </Card>
+                                <Card className="p-6">
+                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Settings size={20} /> Account Settings</h3>
+                                    <form onSubmit={handleUpdateOrgInfo} className="space-y-4 max-w-md">
+                                        {profileMsg.text && <div className={`p-3 text-sm rounded ${profileMsg.type==='success'?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`}>{profileMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium">Organization Name</label><input className="w-full p-2 border rounded" value={profileName} onChange={e=>setProfileName(e.target.value)} /></div>
+                                        <div>
+                                            <label className="block text-sm font-medium">Email Address</label>
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="email"
+                                                    className="w-full p-2 border rounded" 
+                                                    value={profileEmail} 
+                                                    onChange={e => setProfileEmail(e.target.value)}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">Note: Email update requires verification.</p>
+                                        </div>
+                                        <Button type="submit">Update Info</Button>
+                                    </form>
+                                </Card>
+                                <Card className="p-6">
+                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Lock size={20} className="text-indigo-600" /> Security</h3>
+                                    <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
+                                        {passMsg.text && <div className={`p-3 text-sm rounded-lg ${passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{passMsg.text}</div>}
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Enter new password" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input type="password" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" /></div>
+                                        <Button type="submit">Update Password</Button>
+                                    </form>
+                                </Card>
+                            </div>
+                        )}
+                        {tab === 'requests' && (
+                            <Card className="p-6">
+                                <h3 className="font-bold mb-4">Requests</h3>
+                                <div className="space-y-3">
+                                    {requests.map(r => (
+                                        <div key={r.id} className="p-4 border rounded bg-white flex flex-col gap-3">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-bold">{r.serviceName} {r.servicePrice && <span className="text-gray-500 font-normal text-xs">(₹{r.servicePrice})</span>}</div>
+                                                    <div className="text-sm text-gray-500">{r.userName || "User"}</div>
+                                                    <Badge color={r.status==='accepted'?'green':r.status==='declined'?'red':r.status==='in_progress'?'yellow':r.status==='completed'?'green':r.status==='cancelled'?'gray':'blue'}>{r.status}</Badge>
+                                                </div>
+                                                {r.status === 'pending' && (
+                                                    <div className="flex gap-2">
+                                                        <Button onClick={()=>handleAcceptToggle(r.id)} variant={confirmingReqId === `${r.id}-accepted` ? 'primary' : 'success'} className="!py-1 transition-all">{confirmingReqId === `${r.id}-accepted` ? 'Confirm?' : 'Accept'}</Button>
+                                                        <Button onClick={()=>setDeclineModalReqId(r.id)} variant="secondary" className="!py-1 transition-all">Decline</Button>
+                                                    </div>
+                                                )}
+                                                {['accepted', 'in_progress', 'completed'].includes(r.status) && (
+                                                    <div className="mt-2 md:mt-0">
+                                                        <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value)} className="text-sm border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                                                            <option value="accepted">Not Started</option>
+                                                            <option value="in_progress">In Progress</option>
+                                                            <option value="completed">Completed</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                {r.status === 'cancelled' && <span className="text-sm text-gray-500 italic">Cancelled by User</span>}
+                                                {r.status === 'declined' && r.declineReason && (
+                                                    <div className="text-sm text-red-600 italic bg-red-50 p-2 rounded">
+                                                        <strong>Decline Reason:</strong> {r.declineReason}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {r.feedback && (
+                                                <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-xs font-bold text-yellow-800 uppercase tracking-wide">Client Feedback</span>
+                                                        <StarRating rating={r.feedback.rating} />
+                                                    </div>
+                                                    <p className="text-sm text-gray-700 italic">"{r.feedback.comment}"</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {requests.length===0 && <p className="text-gray-500">No requests.</p>}
+                                </div>
+                            </Card>
+                        )}
+                        {tab === 'messages' && (<OrgChatList user={user} onSelectChat={setActiveChatId} />)}
+                        {tab === 'grievances' && <CommonGrievanceList user={user} role="organization" />}
+                    </div>
+                    {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
+                    {declineModalReqId && <DeclineModal onClose={() => setDeclineModalReqId(null)} onSubmit={onDeclineSubmit} />}
+                </div>
+            );
+        }
+
         // --- SUB-COMPONENTS FOR USER DASHBOARD ---
         function UserProfile({ user, userData }) {
             const [pass, setPass] = useState('');
@@ -1685,7 +1988,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [tab, setTab] = useState('find_support');
             const [confirmingCancelId, setConfirmingCancelId] = useState(null);
-            const [referralCodeInput, setReferralCodeInput] = useState(''); // NEW: Referral Code state
+            const [referralCodeInput, setReferralCodeInput] = useState('');
 
             useEffect(() => { 
                 const unsubOrgs = onSnapshot(query(collection(db, 'users'), where('role', '==', 'organization'), where('isActive', '==', true)), 
@@ -1706,14 +2009,13 @@
 
                 let freelancerDocId = null;
 
-                // VALIDATE REFERRAL CODE DURING PURCHASE
                 if (referralCodeInput.trim()) {
                     try {
                         const q = query(collection(db, 'users'), where('role', '==', 'freelancer'), where('referralCode', '==', referralCodeInput.trim().toUpperCase()));
                         const snap = await getDocs(q);
                         if (snap.empty) {
                             alert("Invalid Referral Code. Please check the code or clear the field to proceed without it.");
-                            return; // Stop checkout if code is bad
+                            return; 
                         }
                         freelancerDocId = snap.docs[0].id;
                     } catch (err) {
@@ -1733,11 +2035,10 @@
                         serviceName: paymentModalData.serviceName, 
                         servicePrice: paymentModalData.servicePrice, 
                         status: 'payment_review', 
-                        usedReferralCode: referralCodeInput.trim().toUpperCase() || null, // Tracking
+                        usedReferralCode: referralCodeInput.trim().toUpperCase() || null,
                         createdAt: serverTimestamp() 
                     }); 
 
-                    // INCREMENT FREELANCER STATS IF VALID CODE WAS USED
                     if (freelancerDocId) {
                         try {
                             await updateDoc(doc(db, 'users', freelancerDocId), {
@@ -1753,7 +2054,7 @@
                     await sendSystemEmail(SUPER_ADMINS, "Admin Alert: Payment Review Pending", `<p>A new request requires payment review.</p><p><strong>Service:</strong> ${paymentModalData.serviceName}</p><p><strong>User:</strong> ${user.email}</p><p><strong>Org:</strong> ${paymentModalData.org.displayName}</p>`);
                     
                     setPaymentModalData(null); 
-                    setReferralCodeInput(''); // Reset field
+                    setReferralCodeInput(''); 
                 } catch (e) { 
                     console.error("Payment confirmation failed:", e); 
                     alert("Payment confirmation failed. Please try again.");
@@ -1794,6 +2095,10 @@
             };
 
             const filteredOrgs = orgs.filter(o => o.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.services?.some(s => (typeof s === 'string' ? s : s.name).toLowerCase().includes(searchTerm.toLowerCase())));
+            
+            // NEW: Sort by completed requests
+            const sortedOrgs = [...filteredOrgs].sort((a, b) => (b.completedRequests || 0) - (a.completedRequests || 0));
+            const highestScore = sortedOrgs.length > 0 ? Math.max(...sortedOrgs.map(o => o.completedRequests || 0)) : 0;
 
             return (
                 <div className="grid lg:grid-cols-4 gap-8">
@@ -1806,17 +2111,24 @@
                                     <input className="w-full md:w-64 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
                                 </div>
                                 <div className="grid gap-6">
-                                    {filteredOrgs.map(org => {
+                                    {sortedOrgs.map(org => {
                                         const isOrgAvailable = org.isAvailable !== false;
+                                        const isGold = (org.completedRequests || 0) > 0 && (org.completedRequests || 0) === highestScore;
+                                        
                                         return (
                                             <Card key={org.id} className={`p-6 transition-all duration-300 ${!isOrgAvailable ? 'opacity-75 bg-gray-50' : ''}`}>
                                                 <div className="flex items-start justify-between">
                                                     <div>
-                                                        <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-3 flex-wrap">
                                                             <h3 className="text-xl font-bold text-gray-900">{org.displayName}</h3>
+                                                            {isGold && <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-yellow-200 shadow-sm"><Award size={12}/> Gold</span>}
                                                             <Badge color={isOrgAvailable ? 'green' : 'red'}>{isOrgAvailable ? 'Available' : 'Unavailable'}</Badge>
                                                         </div>
                                                         <p className="text-gray-500 text-sm mt-2">{org.description || "No description provided."}</p>
+                                                        <div className="mt-2 flex items-center gap-2 text-xs font-medium text-gray-500">
+                                                            <CheckCircle size={14} className={org.completedRequests > 0 ? "text-green-500" : "text-gray-400"} />
+                                                            {org.completedRequests || 0} Orders Completed
+                                                        </div>
                                                     </div>
                                                     <div className="flex flex-col gap-2">
                                                         <div className={`p-2 rounded-lg self-end ${isOrgAvailable ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-200 text-gray-400'}`}><Building2 size={24} /></div>

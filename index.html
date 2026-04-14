@@ -80,7 +80,7 @@
             User, Shield, Building2, LogOut, Plus, Trash2, CheckCircle, XCircle, 
             Newspaper, MessageSquare, Menu, X, Heart, Briefcase, Send, 
             MessageCircle, IndianRupee, Check, Settings, Lock, Search, AlertCircle, Clock, Edit2, AlertTriangle, FileText,
-            BookOpen, Users, Mail, Star, ThumbsUp, Activity, Server, Megaphone, Award
+            BookOpen, Users, Mail, Star, ThumbsUp, Activity, Server, Megaphone, Award, Bot
         } from 'lucide-react';
 
         // --- MCP CONFIGURATION (Integrated) ---
@@ -539,7 +539,7 @@
             
             useEffect(() => {
                 const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
-                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))), (error) => console.error("Grievance List Error:", error));
                 return () => unsub();
             }, [user.uid]);
 
@@ -1068,7 +1068,7 @@
                 const q = query(collection(db, 'users'), where('role', '==', 'freelancer'));
                 const unsub = onSnapshot(q, (s) => {
                     setFreelancers(s.docs.map(d => ({id:d.id, ...d.data()})));
-                }); 
+                }, (error) => console.error("Freelancer Network Error:", error)); 
                 return () => unsub(); 
             }, []);
 
@@ -2523,6 +2523,196 @@
             );
         }
 
+        // --- GLOBAL CHATBOT ---
+        function GlobalChatbot({ user }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const bottomRef = useRef(null);
+            const [sessionId, setSessionId] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+
+            // Initialize session ID for the chatbot
+            useEffect(() => {
+                let sid = localStorage.getItem('soh_bot_session');
+                if (user) {
+                    sid = user.uid;
+                    localStorage.setItem('soh_bot_session', sid);
+                } else {
+                    if (!sid || !sid.startsWith('session_')) {
+                        sid = 'session_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem('soh_bot_session', sid);
+                    }
+                }
+                setSessionId(sid);
+            }, [user]);
+
+            // Listen to chat messages in Firestore
+            useEffect(() => {
+                if (!sessionId) return;
+                const q = query(collection(db, 'bot_conversations', sessionId, 'messages'), orderBy('timestamp', 'asc'));
+                const unsub = onSnapshot(q, (snapshot) => {
+                    const msgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setMessages(msgs);
+                    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                }, (error) => {
+                    console.error("Bot Chat Error:", error);
+                    if (error.code === 'permission-denied') {
+                        localStorage.removeItem('soh_bot_session');
+                        setSessionId('session_' + Math.random().toString(36).substr(2, 9));
+                    }
+                });
+                return () => unsub();
+            }, [sessionId]);
+
+            const sendMessage = async (e) => {
+                e.preventDefault();
+                if (!input.trim() || !sessionId || isTyping) return;
+                
+                const userMsg = input.trim();
+                setInput('');
+
+                // 1. Save user's message
+                await addDoc(collection(db, 'bot_conversations', sessionId, 'messages'), {
+                    text: userMsg,
+                    sender: 'user',
+                    timestamp: serverTimestamp()
+                });
+
+                // 2. Ensure parent session doc exists
+                await setDoc(doc(db, 'bot_conversations', sessionId), {
+                    lastUpdated: serverTimestamp(),
+                    userId: user ? user.uid : 'anonymous',
+                    userEmail: user ? user.email : 'No email'
+                }, { merge: true });
+
+                setIsTyping(true);
+
+                // 3. Call AI API for smart response
+                try {
+                    const apiKey = ""; // API key is injected by the secure environment
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    
+                    const systemPrompt = "You are a helpful, empathetic, and professional AI assistant for 'Shades of Hue', a platform empowering the LGBTQ+ (Queer) Community. Keep your answers concise (1-3 sentences), respectful, and focused on helping users navigate the platform. Do not use markdown formatting. Services include: Skill Development, Employment, Inclusivity Workshops, Mental Health.";
+                    
+                    // Create context from last 5 messages to remember conversation history
+                    const recentHistory = messages.slice(-5).map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
+                    const fullPrompt = `Recent conversation history:\n${recentHistory}\nUser: ${userMsg}\nAssistant:`;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: fullPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    };
+
+                    let botReply = "I'm experiencing technical difficulties right now. Please try again later.";
+                    const delays = [1000, 2000, 4000, 8000, 16000];
+
+                    for (let i = 0; i < 5; i++) {
+                        try {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            if (!response.ok) throw new Error('API Error');
+                            
+                            const result = await response.json();
+                            botReply = result.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't process that.";
+                            break; 
+                        } catch (error) {
+                            if (i === 4) break; 
+                            await new Promise(resolve => setTimeout(resolve, delays[i]));
+                        }
+                    }
+
+                    await addDoc(collection(db, 'bot_conversations', sessionId, 'messages'), {
+                        text: botReply.trim(),
+                        sender: 'bot',
+                        timestamp: serverTimestamp()
+                    });
+
+                } catch(err) {
+                    await addDoc(collection(db, 'bot_conversations', sessionId, 'messages'), {
+                        text: "I'm experiencing technical difficulties right now. Please try again later.",
+                        sender: 'bot',
+                        timestamp: serverTimestamp()
+                    });
+                } finally {
+                    setIsTyping(false);
+                }
+            };
+
+            return (
+                <>
+                    {/* Floating Bot Button (Left side to avoid overlapping org chat) */}
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="fixed bottom-6 left-6 w-14 h-14 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full flex items-center justify-center shadow-2xl hover:shadow-indigo-500/50 transition-all hover:scale-105 z-50 border-2 border-white"
+                    >
+                        {isOpen ? <X size={26} /> : <Bot size={26} />}
+                    </button>
+
+                    {/* Chatbot Window */}
+                    {isOpen && (
+                        <div className="fixed bottom-24 left-6 w-[340px] h-[450px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5">
+                            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 flex justify-between items-center shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-white/20 p-2 rounded-lg"><Bot size={20} /></div>
+                                    <div>
+                                        <span className="font-bold block text-sm">Shades of Hue Assistant</span>
+                                        <span className="text-[10px] text-indigo-100 flex items-center gap-1">
+                                            <span className="w-2 h-2 rounded-full bg-green-400 block"></span> Online
+                                        </span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors"><X size={18} /></button>
+                            </div>
+                            
+                            <div className="flex-grow p-4 overflow-y-auto bg-gray-50 flex flex-col gap-4">
+                                {messages.length === 0 && (
+                                    <div className="text-center text-gray-500 text-sm my-auto flex flex-col items-center">
+                                        <Bot size={32} className="text-indigo-200 mb-2" />
+                                        Send a message to start chatting!
+                                    </div>
+                                )}
+                                {messages.map((msg) => {
+                                    const isUser = msg.sender === 'user';
+                                    return (
+                                        <div key={msg.id} className={`max-w-[85%] p-3 rounded-xl text-sm ${isUser ? 'bg-indigo-600 text-white self-end rounded-br-sm shadow-md shadow-indigo-100' : 'bg-white border border-gray-100 text-gray-800 self-start rounded-bl-sm shadow-sm'}`}>
+                                            <p>{msg.text}</p>
+                                        </div>
+                                    );
+                                })}
+                                {isTyping && (
+                                    <div className="max-w-[85%] p-3 rounded-xl text-sm bg-white border border-gray-100 text-gray-500 self-start rounded-bl-sm shadow-sm flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                                    </div>
+                                )}
+                                <div ref={bottomRef} />
+                            </div>
+
+                            <form onSubmit={sendMessage} className="p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
+                                <input 
+                                    type="text" 
+                                    value={input} 
+                                    onChange={(e) => setInput(e.target.value)} 
+                                    placeholder="Type a message..." 
+                                    disabled={isTyping}
+                                    className="flex-grow px-4 py-2 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all disabled:opacity-50" 
+                                />
+                                <button type="submit" disabled={!input.trim() || isTyping} className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0">
+                                    <Send size={18} className="ml-1" />
+                                </button>
+                            </form>
+                        </div>
+                    )}
+                </>
+            );
+        }
+
         // --- MAIN APP COMPONENT ---
         function App() {
             const [currentUser, setCurrentUser] = useState(null);
@@ -2661,6 +2851,9 @@
                     </main>
                     
                     <Footer onShowTerms={() => setShowGlobalTerms(true)} />
+                    
+                    {/* The Global Chatbot added here so it shows on every page */}
+                    <GlobalChatbot user={currentUser} />
                     
                     {showGlobalTerms && <TermsModal onClose={() => setShowGlobalTerms(false)} />}
                 </div>

@@ -10,7 +10,7 @@
     
     <!-- 2. Load EmailJS SDK (REQUIRED FOR FREE EMAILS) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
+
     <!-- 3. Configure Modules (Import Map) -->
     <script type="importmap">
     {
@@ -539,7 +539,7 @@
             
             useEffect(() => {
                 const q = query(collection(db, 'grievances'), where('userId', '==', user.uid));
-                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const unsub = onSnapshot(q, (s) => setGrievances(s.docs.map(d => ({id:d.id, ...d.data()}))), (error) => console.error("Grievance List Error:", error));
                 return () => unsub();
             }, [user.uid]);
 
@@ -1068,7 +1068,7 @@
                 const q = query(collection(db, 'users'), where('role', '==', 'freelancer'));
                 const unsub = onSnapshot(q, (s) => {
                     setFreelancers(s.docs.map(d => ({id:d.id, ...d.data()})));
-                }); 
+                }, (error) => console.error("Freelancer Network Error:", error)); 
                 return () => unsub(); 
             }, []);
 

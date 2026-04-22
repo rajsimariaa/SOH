@@ -68,7 +68,7 @@ const EMAILJS_PUBLIC_KEY = "Hts5u45i6F4kAqm2W";
 // --- FIREBASE CONFIGURATION ---
 
 
-import { auth, db } from './db.js';
+import { auth, db, firebaseConfig } from './db.js';
 
 const SUPER_ADMINS = ['rajsimariaa@gmail.com', 'krutika3011@gmail.com'];
 const UPI_ID = "rajsimariaa-2@okaxis";

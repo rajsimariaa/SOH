@@ -2407,25 +2407,71 @@ function UserDashboard({ user, userData }) {
             </div>
             {activeChatId && <ChatWindow chatId={activeChatId} onClose={() => setActiveChatId(null)} currentUser={user} />}
             {paymentModalData && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Payment</h3>
-                        <p className="text-gray-600 text-sm mb-4">Proceed with request for <span className="font-bold text-indigo-600">{paymentModalData.serviceName}</span>?</p>
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 text-center">
-                            <div className="text-xs text-gray-500 mb-1">UPI ID</div>
-                            <div className="font-mono font-bold text-lg text-gray-800 select-all">{UPI_ID}</div>
-                            {paymentModalData.servicePrice && (<div className="mt-2 text-indigo-600 font-bold">Amount: ₹{paymentModalData.servicePrice}</div>)}
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full animate-in slide-in-from-bottom-8 duration-500">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Complete Payment</h3>
+                            <button onClick={() => { setPaymentModalData(null); setReferralCodeInput(''); }} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"><X size={20} /></button>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Referral Code (Optional)"
-                            className="w-full px-4 py-2 mb-6 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-center font-mono uppercase tracking-wider"
-                            value={referralCodeInput}
-                            onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
-                        />
-                        <div className="flex gap-3">
-                            <Button onClick={() => { setPaymentModalData(null); setReferralCodeInput(''); }} variant="secondary" className="flex-1">Cancel</Button>
-                            <Button onClick={confirmPayment} variant="primary" className="flex-1">Payment Done</Button>
+                        
+                        <div className="bg-brand-50 rounded-2xl p-4 mb-6 border border-brand-100">
+                            <p className="text-[10px] text-brand-600 font-black uppercase tracking-widest mb-1">Service Selected</p>
+                            <p className="text-gray-900 font-bold text-lg leading-tight">{paymentModalData.serviceName}</p>
+                            {paymentModalData.servicePrice && (
+                                <div className="mt-4 pt-4 border-t border-brand-200/50 flex justify-between items-end">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-medium text-gray-500">Total Amount</span>
+                                        <div className="flex items-center gap-1 text-brand-700">
+                                            <IndianRupee size={16} />
+                                            <span className="text-3xl font-black tracking-tighter">{paymentModalData.servicePrice}</span>
+                                        </div>
+                                    </div>
+                                    <Badge color="purple">Secure UPI</Badge>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Dynamic QR Code */}
+                        <div className="flex flex-col items-center mb-6">
+                            <div className="bg-white p-4 rounded-2xl shadow-xl shadow-brand-500/10 border border-gray-100 mb-3 group transition-transform hover:scale-105 duration-300">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${UPI_ID}&pn=ShadesOfHue&am=${paymentModalData.servicePrice || 0}&cu=INR&tn=${encodeURIComponent(paymentModalData.serviceName)}`)}`}
+                                    alt="Payment QR Code"
+                                    className="w-40 h-40"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-400">
+                                <Search size={12} />
+                                <p className="text-[10px] uppercase font-black tracking-widest">Scan with any UPI App</p>
+                            </div>
+                        </div>
+
+                        {/* Pay via App Option */}
+                        <div className="space-y-4">
+                            <a 
+                                href={`upi://pay?pa=${UPI_ID}&pn=ShadesOfHue&am=${paymentModalData.servicePrice || 0}&cu=INR&tn=${encodeURIComponent(paymentModalData.serviceName)}`}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold rounded-2xl hover:shadow-lg hover:shadow-brand-500/30 transition-all active:scale-95"
+                            >
+                                <Send size={18} /> Pay via UPI App
+                            </a>
+
+                            <div className="relative py-2">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+                                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest"><span className="px-2 bg-white text-gray-400">Or referral</span></div>
+                            </div>
+
+                            <input
+                                type="text"
+                                placeholder="Referral Code (Optional)"
+                                className="w-full px-4 py-3 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-brand-500 bg-gray-50 text-center font-mono uppercase tracking-widest text-sm"
+                                value={referralCodeInput}
+                                onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                            />
+                            
+                            <div className="flex gap-3 pt-2">
+                                <Button onClick={() => { setPaymentModalData(null); setReferralCodeInput(''); }} variant="secondary" className="flex-1 !rounded-2xl !py-3">Cancel</Button>
+                                <Button onClick={confirmPayment} variant="primary" className="flex-1 !rounded-2xl !py-3">Confirm Payment</Button>
+                            </div>
                         </div>
                     </div>
                 </div>

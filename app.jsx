@@ -2249,7 +2249,7 @@ function UserDashboard({ user, userData }) {
             await addDoc(collection(db, 'requests'), {
                 userId: user.uid,
                 userEmail: user.email,
-                userName: userData.displayName || 'User',
+                userName: (userData && userData.displayName) || 'User',
                 orgId: paymentModalData.org.id,
                 orgName: paymentModalData.org.displayName,
                 serviceName: paymentModalData.serviceName,
@@ -2603,6 +2603,7 @@ function App() {
                             setUserRole(data.role);
                         }
                     } else {
+                        setUserData({});
                         setUserRole('user');
                         if (!user.emailVerified) setIsUnverified(true);
                     }
@@ -2645,9 +2646,16 @@ function App() {
     useEffect(() => {
         if (loading) return;
         const path = window.location.pathname;
-        
+        const isDashboardPage = path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html');
+
         // Redirect logged-in users away from auth.html
         if (currentUser && path.includes('auth.html')) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // Redirect logged-out users away from dashboard pages
+        if (!currentUser && isDashboardPage) {
             window.location.href = 'index.html';
             return;
         }

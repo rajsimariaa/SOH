@@ -2525,7 +2525,34 @@ function App() {
     const [userRole, setUserRole] = useState(null);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('home');
+    const [view, setView] = useState(() => {
+        const path = window.location.pathname;
+        if (path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html')) {
+            return 'dashboard';
+        }
+        return 'home';
+    });
+
+    const handleNavigate = (target) => {
+        const path = window.location.pathname;
+        const isDashboardPage = path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html');
+
+        if (target === 'home') {
+            if (isDashboardPage) {
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+
+        if (target === 'dashboard' && userRole) {
+            if (userRole === 'admin' && !path.includes('admin.html')) { window.location.href = 'admin.html'; return; }
+            if (userRole === 'user' && !path.includes('user.html')) { window.location.href = 'user.html'; return; }
+            if (userRole === 'organization' && !path.includes('org.html')) { window.location.href = 'org.html'; return; }
+            if (userRole === 'freelancer' && !path.includes('freelancer.html')) { window.location.href = 'freelancer.html'; return; }
+        }
+
+        setView(target);
+    };
     const [isDeactivated, setIsDeactivated] = useState(false);
     const [isUnverified, setIsUnverified] = useState(false);
     const [showGlobalTerms, setShowGlobalTerms] = useState(false);
@@ -2552,7 +2579,7 @@ function App() {
                             await signOut(auth);
                             setCurrentUser(null);
                             setUserRole(null);
-                            setView('home');
+                            handleNavigate('home');
                             setLoading(false);
                             return;
                         }
@@ -2577,7 +2604,7 @@ function App() {
                 setCurrentUser(null);
                 setUserData(null);
                 setUserRole(null);
-                setView('home');
+                handleNavigate('home');
             }
             setLoading(false);
         });
@@ -2601,7 +2628,16 @@ function App() {
         return () => clearInterval(intervalId);
     }, [currentUser]);
 
-    const handleSignOut = async () => { await signOut(auth); setView('home'); setUserRole(null); };
+    useEffect(() => {
+        if (loading || !userRole) return;
+        const path = window.location.pathname;
+        if (path.includes('admin.html') && userRole !== 'admin') window.location.href = 'index.html';
+        else if (path.includes('user.html') && userRole !== 'user') window.location.href = 'index.html';
+        else if (path.includes('org.html') && userRole !== 'organization') window.location.href = 'index.html';
+        else if (path.includes('freelancer.html') && userRole !== 'freelancer') window.location.href = 'index.html';
+    }, [userRole, loading]);
+
+    const handleSignOut = async () => { await signOut(auth); window.location.href = 'index.html'; };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
 
@@ -2645,11 +2681,11 @@ function App() {
 
     return (
         <div className="min-h-screen bg-gray-50 text-gray-800 font-sans flex flex-col">
-            <Navbar user={currentUser} role={userRole} onNavigate={setView} onSignOut={handleSignOut} currentView={view} />
+            <Navbar user={currentUser} role={userRole} onNavigate={handleNavigate} onSignOut={handleSignOut} currentView={view} />
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
-                {view === 'home' && <Home user={currentUser} onNavigate={setView} />}
-                {view === 'login' && <Login onNavigate={setView} />}
-                {view === 'signup' && <Signup onNavigate={setView} />}
+                {view === 'home' && <Home user={currentUser} onNavigate={handleNavigate} />}
+                {view === 'login' && <Login onNavigate={handleNavigate} />}
+                {view === 'signup' && <Signup onNavigate={handleNavigate} />}
                 {view === 'dashboard' && userRole === 'admin' && <AdminDashboard user={currentUser} />}
                 {view === 'dashboard' && userRole === 'organization' && <OrgDashboard user={currentUser} userData={userData} />}
                 {view === 'dashboard' && userRole === 'user' && <UserDashboard user={currentUser} userData={userData} />}

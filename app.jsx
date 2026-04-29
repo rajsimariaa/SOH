@@ -2530,6 +2530,9 @@ function App() {
         if (path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html')) {
             return 'dashboard';
         }
+        if (path.includes('auth.html')) {
+            return 'login';
+        }
         return 'home';
     });
 
@@ -2538,8 +2541,15 @@ function App() {
         const isDashboardPage = path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html');
 
         if (target === 'home') {
-            if (isDashboardPage) {
+            if (isDashboardPage || path.includes('auth.html')) {
                 window.location.href = 'index.html';
+                return;
+            }
+        }
+
+        if (target === 'login' || target === 'signup') {
+            if (!path.includes('auth.html')) {
+                window.location.href = 'auth.html';
                 return;
             }
         }
@@ -2604,7 +2614,11 @@ function App() {
                 setCurrentUser(null);
                 setUserData(null);
                 setUserRole(null);
-                handleNavigate('home');
+                const path = window.location.pathname;
+                const isDashboardPage = path.includes('admin.html') || path.includes('user.html') || path.includes('org.html') || path.includes('freelancer.html');
+                if (isDashboardPage) {
+                    handleNavigate('home');
+                }
             }
             setLoading(false);
         });
@@ -2629,13 +2643,21 @@ function App() {
     }, [currentUser]);
 
     useEffect(() => {
-        if (loading || !userRole) return;
+        if (loading) return;
         const path = window.location.pathname;
+        
+        // Redirect logged-in users away from auth.html
+        if (currentUser && path.includes('auth.html')) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        if (!userRole) return;
         if (path.includes('admin.html') && userRole !== 'admin') window.location.href = 'index.html';
         else if (path.includes('user.html') && userRole !== 'user') window.location.href = 'index.html';
         else if (path.includes('org.html') && userRole !== 'organization') window.location.href = 'index.html';
         else if (path.includes('freelancer.html') && userRole !== 'freelancer') window.location.href = 'index.html';
-    }, [userRole, loading]);
+    }, [userRole, loading, currentUser]);
 
     const handleSignOut = async () => { await signOut(auth); window.location.href = 'index.html'; };
 

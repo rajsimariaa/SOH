@@ -1,92 +1,789 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shades of Hue</title>
-
-    <!-- 1. Load Styles (Tailwind CSS) -->
+    <title>Raj Simaria | Elite Web Design</title>
+    <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,700,600&f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Outfit', 'sans-serif'],
-                        body: ['Inter', 'sans-serif'],
-                    },
                     colors: {
                         brand: {
-                            50: '#f5f3ff',
-                            100: '#ede9fe',
-                            200: '#ddd6fe',
-                            300: '#c4b5fd',
-                            400: '#a78bfa',
-                            500: '#8b5cf6',
-                            600: '#7c3aed',
-                            700: '#6d28d9',
-                            800: '#5b21b6',
-                            900: '#4c1d95',
-                        }
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-out',
-                        'slide-up': 'slideUp 0.5s ease-out',
-                        'bounce-soft': 'bounceSoft 2s infinite',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
+                            primary: '#6366f1',
+                            secondary: '#a855f7',
+                            accent: '#ec4899',
                         },
-                        slideUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        },
-                        bounceSoft: {
-                            '0%, 100%': { transform: 'translateY(-5%)' },
-                            '50%': { transform: 'translateY(0)' },
-                        }
-                    }
+                        bg: '#000000',
+                    },
+                    fontFamily: {
+                        display: ['Clash Display', 'sans-serif'],
+                        sans: ['Satoshi', 'sans-serif'],
+                    },
                 }
             }
         }
     </script>
+    <style>
+        :root {
+            --aura-1: #0f172a; /* Deep Slate */
+            --aura-2: #020617; /* Very Dark Slate */
+            --aura-3: #1e1b4b; /* Indigo */
+            --accent: #06b6d4; /* Cyan */
+        }
 
-    <!-- 2. Load EmailJS SDK (REQUIRED FOR FREE EMAILS) -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+        body {
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            font-family: 'Satoshi', sans-serif;
+        }
 
-    <!-- 3. Configure Modules (Import Map) -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.344.0",
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-      }
-    }
-    </script>
+        /* Aura Background */
+        .aura-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            filter: blur(120px);
+            opacity: 0.25;
+            transform: translateY(var(--py, 0px));
+            will-change: transform;
+        }
 
-    <!-- 4. Load Babel (To understand JSX code in browser) -->
-    <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+        .aura-blob {
+            position: absolute;
+            width: 50vw;
+            height: 50vw;
+            border-radius: 50%;
+            animation: drift 20s infinite alternate-reverse;
+        }
 
-    <link rel="stylesheet" href="styles.css">
+        .blob-1 { background: var(--aura-1); top: -10%; left: -10%; animation-delay: 0s; }
+        .blob-2 { background: var(--aura-2); bottom: -10%; right: -10%; animation-delay: -5s; }
+        .blob-3 { background: var(--aura-3); top: 50%; left: 50%; transform: translate(-50%, -50%); animation: drift 15s infinite alternate; }
+
+        @keyframes drift {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(10%, 10%) scale(1.2); }
+        }
+
+        /* 3D Canvas Hero Background */
+        #hero-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Deep Elegance Glassmorphism */
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 2rem;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+            transform: translateY(var(--py, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale3d(var(--s, 1), var(--s, 1), var(--s, 1));
+        }
+
+        .glass-card:hover {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        /* Floating Nav */
+        .floating-nav {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 2rem;
+            border-radius: 999px;
+            z-index: 1000;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.6s, background 0.4s;
+        }
+
+        .floating-nav.nav-hidden {
+            transform: translateX(-50%) translateY(-120%);
+            opacity: 0;
+        }
+
+        .floating-nav.nav-solid {
+            background: rgba(0, 0, 0, 0.8);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Typography */
+        .gradient-text {
+            background: linear-gradient(135deg, #fff 0%, #06b6d4 50%, #6366f1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-title {
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        /* Cinematic Scroll Animations */
+        [data-scroll] {
+            opacity: 0;
+            will-change: transform, opacity;
+            transition: all 2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        [data-scroll].in-view {
+            opacity: 1;
+            transform: none !important;
+        }
+
+        [data-scroll="fade-up"] {
+            transform: translateY(100px);
+        }
+
+        [data-scroll="fade-up-large"] {
+            transform: translateY(160px) scale(0.92);
+        }
+
+        [data-scroll="fade-left"] {
+            transform: translateX(-120px);
+        }
+
+        [data-scroll="fade-right"] {
+            transform: translateX(120px);
+        }
+
+        [data-scroll="scale-in"] {
+            transform: scale(0.7);
+        }
+
+        [data-scroll="rotate-in"] {
+            transform: perspective(1000px) rotateY(25deg) translateX(80px);
+        }
+
+        [data-scroll="clip-up"] {
+            clip-path: inset(100% 0 0 0);
+            transform: none;
+        }
+
+        [data-scroll="clip-up"].in-view {
+            clip-path: inset(0 0 0 0);
+            transition: clip-path 1.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 1.4s;
+        }
+
+        /* Stagger children */
+        [data-scroll-stagger] > * {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        [data-scroll-stagger].in-view > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: none; }
+        [data-scroll-stagger].in-view > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: none; }
+        [data-scroll-stagger].in-view > *:nth-child(3) { transition-delay: 0.2s; opacity: 1; transform: none; }
+        [data-scroll-stagger].in-view > *:nth-child(4) { transition-delay: 0.3s; opacity: 1; transform: none; }
+        [data-scroll-stagger].in-view > *:nth-child(5) { transition-delay: 0.4s; opacity: 1; transform: none; }
+        [data-scroll-stagger].in-view > *:nth-child(6) { transition-delay: 0.5s; opacity: 1; transform: none; }
+
+        /* Horizontal Rule animation */
+        .scroll-line {
+            width: 0;
+            transition: width 2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .scroll-line.in-view {
+            width: 100%;
+        }
+
+        /* Section Counter */
+        .section-counter {
+            position: relative;
+        }
+
+        .section-counter::before {
+            content: attr(data-count);
+            position: absolute;
+            top: -3rem;
+            left: 0;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            color: rgba(99, 102, 241, 0.4);
+            font-family: 'Clash Display', sans-serif;
+        }
+
+        /* Legacy .reveal support */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 3D Float internal elements */
+        .float-3d {
+            transform: translateZ(40px);
+            will-change: transform;
+        }
+
+        /* Custom Cursor */
+        @media (pointer: fine) {
+            body, a, button, input, .glass-card {
+                cursor: none !important;
+            }
+        }
+        
+        .cursor-dot, .cursor-outline {
+            position: fixed;
+            top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9999;
+        }
+        
+        .cursor-dot {
+            width: 8px; height: 8px;
+            background: #6366f1;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #6366f1, 0 0 20px #6366f1;
+        }
+        
+        .cursor-outline {
+            width: 40px; height: 40px;
+            border: 1px solid rgba(99, 102, 241, 0.5);
+            border-radius: 50%;
+            transition: width 0.2s, height 0.2s, background 0.2s, border-color 0.2s;
+            z-index: 9998;
+        }
+
+        /* Button Glow */
+        .glow-button {
+            position: relative;
+            background: #0f172a;
+            color: #ffffff;
+            overflow: hidden;
+            z-index: 1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform-style: preserve-3d;
+        }
+
+        .glow-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, var(--aura-1), var(--aura-2), var(--aura-3), transparent);
+            animation: rotate 4s linear infinite;
+            z-index: -1;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+            transform: translateZ(-1px);
+        }
+
+        .glow-button:hover::after {
+            opacity: 1;
+        }
+
+        .glow-button::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: #0f172a;
+            border-radius: inherit;
+            z-index: -1;
+            transform: translateZ(0);
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Gradient Groove Animation */
+        .hero-title:hover .scramble-text {
+            color: transparent !important;
+            background-clip: text;
+            -webkit-background-clip: text;
+            background-image: linear-gradient(270deg, #06b6d4, #3b82f6, #6366f1, #a855f7, #06b6d4);
+            background-size: 300% 300%;
+            animation: gradientGroove 2s ease infinite;
+            text-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
+        }
+
+        @keyframes gradientGroove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Magnetic Button Effect */
+        .magnetic-btn {
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        /* Elastic glass card hover */
+        .glass-card {
+            transition: background 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+                        box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                        border-color 0.5s;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 25px 60px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        /* Tag pills micro-animation */
+        .glass-card .px-3 {
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .glass-card:hover .px-3 {
+            background: rgba(99, 102, 241, 0.1);
+            color: rgba(99, 102, 241, 0.8);
+            transform: translateY(-2px);
+        }
+
+        /* Text shimmer on hover */
+        .glass-card h3 {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .glass-card:hover h3 {
+            background: linear-gradient(120deg, #fff 0%, #06b6d4 50%, #fff 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s ease infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 3D Bento Box Layout */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 2rem;
+        }
+        .bento-col-4 { grid-column: span 12; }
+        .bento-col-8 { grid-column: span 12; }
+        .bento-col-6 { grid-column: span 12; }
+        
+        @media (min-width: 768px) {
+            .md\:bento-col-4 { grid-column: span 4; }
+            .md\:bento-col-8 { grid-column: span 8; }
+            .md\:bento-col-6 { grid-column: span 6; }
+            .md\:bento-col-12 { grid-column: span 12; }
+        }
+
+        /* Ambient particles canvas */
+        #ambient-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        /* Work card inner parallax */
+        .work-inner-gradient {
+            transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        /* Footer slide up */
+        footer {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1) 0.2s;
+        }
+        footer.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Nav link underline animation */
+        .floating-nav a:not(:first-child)::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            width: 0;
+            height: 1px;
+            background: #6366f1;
+            transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1), left 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .floating-nav a:not(:first-child):hover::after {
+            width: 100%;
+            left: 0;
+        }
+        .floating-nav a:not(:first-child) {
+            position: relative;
+        }
+    </style>
 </head>
 
-<body class="bg-brand-50 text-gray-800 font-body antialiased selection:bg-brand-500 selection:text-white">
-    <div id="root"></div>
+<body>
+    <!-- Scroll Progress Bar -->
+    <div id="scroll-progress" class="fixed top-0 left-0 h-1 w-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-[9999] transition-all duration-150 ease-out shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
 
-    <!-- 5. Your Application Code -->
-    <script type="text/babel" data-type="module" data-presets="react" src="app.jsx"></script>
+    <!-- Custom Cursor -->
+    <div class="cursor-dot hidden md:block" id="cursor-dot"></div>
+    <div class="cursor-outline hidden md:block" id="cursor-outline"></div>
+
+    <!-- Background Aura -->
+    <div class="aura-container">
+        <div class="aura-blob blob-1"></div>
+        <div class="aura-blob blob-2"></div>
+        <div class="aura-blob blob-3"></div>
+    </div>
+
+    <!-- Ambient Floating Particles -->
+    <canvas id="ambient-particles"></canvas>
+
+    <!-- Navigation -->
+    <nav class="floating-nav hidden md:flex">
+        <a href="#" class="flex items-center justify-center no-underline">
+            <img src="logo.png" alt="Raj Simaria Logo" class="h-8 w-auto hover:scale-105 transition-transform object-contain">
+        </a>
+        <div class="w-px h-4 bg-white/10"></div>
+        <a href="#expertise" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white transition-colors no-underline">Skills</a>
+        <a href="#work" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white transition-colors no-underline">Works</a>
+        <a href="#shop" class="text-xs uppercase tracking-widest text-slate-400 hover:text-white transition-colors no-underline">Shop</a>
+        <a href="login.html" class="text-xs uppercase tracking-widest text-indigo-400 font-bold no-underline">Portal</a>
+    </nav>
+
+    <!-- Mobile Menu Button -->
+    <button class="fixed top-8 right-8 z-[1001] md:hidden bg-white/5 backdrop-blur-xl border border-white/10 p-4 rounded-2xl text-white" id="menu-btn">
+        <i data-lucide="menu"></i>
+    </button>
+
+    <!-- Mobile Menu -->
+    <div class="fixed inset-0 bg-[#000000]/98 backdrop-blur-2xl z-[2000] flex flex-col justify-center p-10 transition-all duration-700 translate-x-full opacity-0 invisible" id="mobile-menu">
+        <button class="absolute top-8 right-8 p-4 bg-white/5 rounded-2xl text-white" id="close-btn">
+            <i data-lucide="x"></i>
+        </button>
+        <div class="flex flex-col gap-8">
+            <a href="#expertise" class="mobile-link text-5xl font-display font-bold hover:text-indigo-400 transition-colors text-white no-underline">Skills</a>
+            <a href="#work" class="mobile-link text-5xl font-display font-bold hover:text-indigo-400 transition-colors text-white no-underline">Work</a>
+            <a href="#shop" class="mobile-link text-5xl font-display font-bold hover:text-indigo-400 transition-colors text-white no-underline">Shop</a>
+            <a href="login.html" class="mobile-link text-xl font-bold text-indigo-400 no-underline">System Portal</a>
+        </div>
+    </div>
+
+    <main class="relative z-10">
+        <!-- Hero Section -->
+        <section class="min-h-screen flex items-center justify-center relative px-6 pt-20 overflow-hidden" id="hero">
+            <canvas id="hero-canvas"></canvas>
+            
+            <div class="max-w-7xl mx-auto w-full relative z-10 text-center" id="hero-content">
+                <div class="inline-flex items-center gap-4 px-6 py-2 rounded-full glass-card mb-10 reveal border-white/5" data-scroll="fade-up" data-scroll-delay="0">
+                    <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.8)]"></span>
+                    <span class="text-[11px] font-medium uppercase tracking-[0.4em] text-slate-300 scramble-text">Visionary Developer</span>
+                </div>
+                
+                <h1 class="hero-title text-[clamp(2.5rem,10vw,8rem)] font-bold tracking-tight leading-[1.05] mb-8 reveal" data-scroll="fade-up-large" data-scroll-delay="200">
+                    <span class="text-white scramble-text">CRAFTING</span> <br>
+                    <span class="gradient-text scramble-text">DIMENSIONS</span>
+                </h1>
+                
+                <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto font-light leading-relaxed mb-14 reveal" data-scroll="fade-up" data-scroll-delay="400">
+                    Engineering high-fidelity digital experiences that merge <span class="text-white font-medium">creative vision</span> with absolute performance.
+                </p>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-6 reveal" data-scroll="fade-up" data-scroll-delay="600">
+                    <a href="#work" class="glow-button magnetic-btn px-10 py-5 rounded-2xl font-bold text-sm uppercase tracking-widest no-underline transition-all">
+                        View Matrix
+                    </a>
+                    <a href="#contact" class="magnetic-btn bg-white/5 border border-white/10 text-white px-10 py-5 rounded-2xl font-bold text-sm uppercase tracking-widest hover:bg-white/10 transition-all no-underline backdrop-blur-md">
+                        Contact
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Expertise Section -->
+        <section id="expertise" class="max-w-7xl mx-auto px-6 py-40 relative z-10">
+            <div class="text-center mb-32" data-scroll="fade-up-large">
+                <p class="text-[11px] font-medium uppercase tracking-[0.4em] text-indigo-400 mb-6 section-counter" data-count="01">What I Do</p>
+                <h2 class="text-5xl md:text-7xl font-bold tracking-tight mb-6 scramble-text">Expertise<span class="text-indigo-500">.</span></h2>
+                <p class="text-slate-400 max-w-xl mx-auto font-light leading-relaxed">Solving complex problems with elegant code and futuristic design systems.</p>
+            </div>
+
+            <div class="bento-grid pb-20" data-scroll-stagger data-scroll="fade-up">
+                <!-- Large Feature Card -->
+                <div class="glass-card p-12 group bento-col-8 md:bento-col-8 flex flex-col justify-between min-h-[400px] relative overflow-hidden" data-scroll="fade-up" data-scroll-delay="0">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-700"></div>
+                    <div class="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-10 group-hover:scale-110 transition-transform duration-500 relative z-10 backdrop-blur-md">
+                        <i data-lucide="layout" class="w-8 h-8 text-indigo-400"></i>
+                    </div>
+                    <div class="relative z-10 mt-auto">
+                        <h3 class="text-3xl font-bold mb-4 tracking-tight">Interface Architecture</h3>
+                        <p class="text-slate-400 leading-relaxed font-light text-lg max-w-md">Bespoke UI/UX engineered with absolute precision. Focusing on spatial hierarchy, fluid typography, and micro-interactions that breathe life into the DOM.</p>
+                        <div class="mt-8 flex gap-3 flex-wrap">
+                            <span class="px-4 py-2 bg-black/40 border border-white/5 rounded-full text-[10px] font-bold text-slate-300 uppercase tracking-widest">Tailwind CSS</span>
+                            <span class="px-4 py-2 bg-black/40 border border-white/5 rounded-full text-[10px] font-bold text-slate-300 uppercase tracking-widest">WebGL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Cards -->
+                <div class="glass-card p-10 group bento-col-4 md:bento-col-4 flex flex-col min-h-[400px]" data-scroll="fade-up" data-scroll-delay="200">
+                    <div class="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 backdrop-blur-md">
+                        <i data-lucide="zap" class="w-6 h-6 text-cyan-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 tracking-tight mt-auto">System Performance</h3>
+                    <p class="text-slate-400 leading-relaxed font-light text-sm">Scalable infrastructures and real-time pipelines optimized for absolute peak efficiency.</p>
+                    <div class="mt-8 flex gap-3 flex-wrap">
+                        <span class="px-3 py-1.5 bg-black/40 border border-white/5 rounded-full text-[9px] font-bold text-slate-300 uppercase tracking-widest">Node.js</span>
+                    </div>
+                </div>
+
+                <div class="glass-card p-10 group bento-col-12 md:bento-col-12 flex flex-col md:flex-row items-center justify-between gap-10" data-scroll="fade-up" data-scroll-delay="400">
+                    <div class="flex-1">
+                        <div class="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 backdrop-blur-md">
+                            <i data-lucide="shopping-bag" class="w-6 h-6 text-pink-400"></i>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-4 tracking-tight">E-Commerce Forge</h3>
+                        <p class="text-slate-400 leading-relaxed font-light text-lg max-w-xl">Converting users into customers with seamless, secure, and lightning-fast algorithmic checkout flows.</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="px-8 py-6 bg-black/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center">
+                            <span class="text-3xl font-bold text-white mb-2">99%</span>
+                            <span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Uptime</span>
+                        </div>
+                        <div class="px-8 py-6 bg-black/40 border border-white/5 rounded-2xl flex flex-col items-center justify-center">
+                            <span class="text-3xl font-bold text-white mb-2">&lt;1s</span>
+                            <span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Latency</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Work Section -->
+        <section id="work" class="max-w-7xl mx-auto px-6 py-40">
+            <div class="text-center mb-32" data-scroll="fade-up-large">
+                <p class="text-[11px] font-medium uppercase tracking-[0.4em] text-slate-500 mb-6 section-counter" data-count="02">Portfolio</p>
+                <h2 class="text-5xl md:text-7xl font-bold tracking-tight mb-6 scramble-text">Archive<span class="text-slate-500">.</span></h2>
+                <p class="text-slate-400 max-w-xl mx-auto font-light leading-relaxed">A selection of my recent high-end digital deployments.</p>
+            </div>
+
+            <div class="bento-grid pb-20">
+                <a href="https://shadesofhue.vercel.app" target="_blank" class="group block no-underline bento-col-6 md:bento-col-6" data-scroll="fade-up" data-scroll-delay="0">
+                    <div class="aspect-[4/3] glass-card overflow-hidden mb-6 relative p-2">
+                        <div class="w-full h-full rounded-2xl overflow-hidden relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/30 to-black/80 group-hover:scale-105 transition-transform duration-1000 z-10"></div>
+                            <div class="absolute inset-0 bg-[#0a0a0a] z-0"></div> <!-- Mock image background -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center z-20 p-8 text-center">
+                                <h3 class="text-4xl font-bold tracking-tight text-white mb-4">Shades of Hue</h3>
+                                <p class="text-indigo-200/60 text-sm font-light uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-y-4 group-hover:translate-y-0">Internal Portal</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center px-4">
+                        <div>
+                            <h4 class="text-lg font-bold text-white">Shades of Hue</h4>
+                            <p class="text-sm text-slate-500 font-light mt-1">Enterprise Architecture</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                            <i data-lucide="arrow-up-right" class="w-4 h-4 text-white"></i>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="https://klulla.com" target="_blank" class="group block no-underline bento-col-6 md:bento-col-6" data-scroll="fade-up" data-scroll-delay="200">
+                    <div class="aspect-[4/3] glass-card overflow-hidden mb-6 relative p-2">
+                        <div class="w-full h-full rounded-2xl overflow-hidden relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-black/80 group-hover:scale-105 transition-transform duration-1000 z-10"></div>
+                            <div class="absolute inset-0 bg-[#0a0a0a] z-0"></div> <!-- Mock image background -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center z-20 p-8 text-center">
+                                <h3 class="text-4xl font-bold tracking-tight text-white mb-4">K Lulla</h3>
+                                <p class="text-cyan-200/60 text-sm font-light uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-y-4 group-hover:translate-y-0">Enterprise UX</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center px-4">
+                        <div>
+                            <h4 class="text-lg font-bold text-white">K Lulla</h4>
+                            <p class="text-sm text-slate-500 font-light mt-1">E-Commerce Platform</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                            <i data-lucide="arrow-up-right" class="w-4 h-4 text-white"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Shop Section -->
+        <section id="shop" class="max-w-7xl mx-auto px-6 py-40">
+            <div class="text-center mb-32" data-scroll="fade-up-large">
+                <p class="text-[11px] font-medium uppercase tracking-[0.4em] text-pink-400 mb-6 section-counter" data-count="03">Store</p>
+                <h2 class="text-5xl md:text-7xl font-bold tracking-tight mb-6 scramble-text">Artifacts<span class="text-pink-500">.</span></h2>
+                <p class="text-slate-400 max-w-xl mx-auto font-light leading-relaxed">Premium resources for elite developers and designers.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="public-works-grid" data-scroll-stagger data-scroll="fade-up">
+                <!-- Dynamic Content from Firestore -->
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="max-w-7xl mx-auto px-6 py-40">
+            <div class="glass-card p-12 md:p-32 text-center relative overflow-hidden" data-scroll="scale-in">
+                <div class="absolute -top-20 -right-20 w-64 h-64 bg-brand-primary/10 blur-3xl rounded-full"></div>
+                <p class="text-[11px] font-medium uppercase tracking-[0.4em] text-indigo-400 mb-6 relative z-10 section-counter" data-count="04">Get In Touch</p>
+                <h2 class="text-5xl md:text-8xl font-bold tracking-tight mb-12 relative z-10"><span class="scramble-text">Start a</span> <span class="gradient-text scramble-text">Project.</span></h2>
+                
+                <div class="flex flex-col sm:flex-row justify-center gap-8 mb-20 relative z-10">
+                    <a href="mailto:rajsimariaa@gmail.com" class="glow-button magnetic-btn px-12 py-6 rounded-2xl font-bold text-sm uppercase tracking-widest no-underline">
+                        Email Inquiry
+                    </a>
+                    <a href="tel:+919702531718" class="magnetic-btn bg-white/5 border border-white/10 text-white px-12 py-6 rounded-2xl font-bold text-sm uppercase tracking-widest hover:bg-white/10 transition-all no-underline">
+                        Direct Line
+                    </a>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-12 text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 relative z-10">
+                    <span>rajsimariaa@gmail.com</span>
+                    <span>+91 9702531718</span>
+                    <span>Mumbai, IN</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Payment Modal -->
+    <div class="fixed inset-0 z-[300] bg-[#000000]/95 backdrop-blur-3xl flex items-center justify-center p-6 transition-all duration-500 opacity-0 invisible pointer-events-none" id="payment-modal">
+        <div class="glass-card w-full max-w-2xl p-12 relative overflow-y-auto max-h-[90vh]">
+            <button class="absolute top-10 right-10 p-4 hover:bg-white/5 rounded-full text-white transition-colors" id="close-modal">
+                <i data-lucide="x"></i>
+            </button>
+            
+            <div class="mb-12">
+                <h2 class="text-4xl font-display font-bold mb-4 modal-title">Transaction</h2>
+                <p class="text-slate-400 font-medium leading-relaxed">Secure gateway for digital assets.</p>
+            </div>
+
+            <div class="flex flex-col gap-10" id="payment-form">
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <input type="text" placeholder="Full Name" class="bg-white/5 border border-white/10 rounded-2xl px-6 py-5 w-full focus:outline-none focus:border-brand-primary transition-colors text-white font-medium" id="pay-name" required>
+                        <input type="email" placeholder="Email" class="bg-white/5 border border-white/10 rounded-2xl px-6 py-5 w-full focus:outline-none focus:border-brand-primary transition-colors text-white font-medium" id="pay-email" required>
+                    </div>
+                    <input type="number" placeholder="Amount (INR)" class="bg-white/5 border border-white/10 rounded-2xl px-6 py-5 w-full focus:outline-none focus:border-brand-primary transition-colors text-white font-medium" id="pay-amount" required>
+                </div>
+
+                <div class="flex flex-col md:flex-row items-center gap-10 bg-white/5 p-10 rounded-[2.5rem] border border-white/5">
+                    <img id="upi-qr" src="" alt="QR" class="w-40 h-40 rounded-2xl border border-white/10">
+                    <div class="flex flex-col gap-6 text-center md:text-left">
+                        <p class="text-xs font-mono text-indigo-400">ID: rajsimariaa-2@okaxis</p>
+                        <a id="upi-link" href="#" class="inline-flex items-center justify-center bg-indigo-500 text-white px-8 py-4 rounded-full font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition-all no-underline">
+                            Open App
+                        </a>
+                    </div>
+                </div>
+
+                <button class="w-full bg-indigo-500 text-white py-6 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl" id="payment-done-btn">Confirm Payment</button>
+            </div>
+
+            <div class="hidden text-center py-20" id="payment-success">
+                <i data-lucide="check-circle" class="w-20 h-20 text-indigo-500 mx-auto mb-8 animate-bounce"></i>
+                <h3 class="text-4xl font-display font-bold mb-6">Success</h3>
+                <p class="text-slate-400 font-medium max-w-sm mx-auto">Manual verification protocol initiated. Deployment pending.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-20 border-t border-white/5 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12 text-slate-500">
+            <div class="flex flex-col gap-2">
+                <p class="text-[10px] font-bold uppercase tracking-widest">© <span id="year"></span> Raj Simaria</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest">Mumbai, India</p>
+            </div>
+            
+            <div class="flex gap-8">
+                <a href="https://wa.me/919702531718" target="_blank" class="hover:text-white transition-colors text-slate-500 hover:scale-110 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest no-underline">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                        <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path>
+                        <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"></path>
+                    </svg>
+                    WhatsApp
+                </a>
+                <a href="https://linkedin.com/company/raj-simaria" target="_blank" class="hover:text-white transition-colors text-slate-500 hover:scale-110 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest no-underline">
+                    <i data-lucide="linkedin" class="w-5 h-5"></i>
+                    LinkedIn
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <style>
+        #mobile-menu.active {
+            transform: translateX(0);
+            opacity: 1;
+            visibility: visible;
+        }
+        #payment-modal.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #payment-modal.active > div {
+            transform: scale(1);
+        }
+        #payment-modal > div {
+            transform: scale(0.9);
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+    </style>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>lucide.createIcons();</script>
 </body>
-
 </html>

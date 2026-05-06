@@ -1,47 +1,89 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper: Check if user is admin
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Check if the user has an admin role in their document
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'rajsimariaa@gmail.com';
+      let isSuperAdmin = request.auth.token.email in ['rajsimariaa@gmail.com', 'krutika3011@gmail.com'];
+      return isSignedIn() && (isSuperAdmin || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Helper: Check if user is authenticated and verified
-    function isAuthenticated() {
-      return request.auth != null && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
-    }
+    // --- Collections ---
 
-    // Users Collection (Profile Data)
+    // Users Collection: Everyone can see their own, admins see all, and users can see organizations.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if isAdmin();
+      allow read: if isSignedIn() && (
+        isOwner(userId) || 
+        isAdmin() || 
+        resource.data.role == 'organization'
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
     }
 
-    // Payments / Orders
-    match /payments/{paymentId} {
-      // ANYONE can create a payment (Guest checkout)
-      allow create: if true;
-      
-      // Users can read their own payments based on EMAIL
-      allow read: if isAdmin() || (
-        isAuthenticated() && 
-        request.auth.token.email == resource.data.email
+    // Requests Collection: User who requested, Org who provides, and Admins can access.
+    match /requests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.orgId == request.auth.uid || 
+        isAdmin()
       );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.orgId == request.auth.uid || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Chats Collection: Participants and Admins can access.
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid in resource.data.participants || 
+        isAdmin()
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        request.auth.uid in resource.data.participants || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
       
-      // Admin can verify (update)
+      // Messages Sub-collection
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || 
+          isAdmin()
+        );
+        allow create: if isSignedIn() && (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+        );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Grievances Collection
+    match /grievances/{grievanceId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
       allow update: if isAdmin();
-      
-      // Users can delete their own pending payments
-      allow delete: if isAdmin() || (
-        isAuthenticated() && 
-        request.auth.token.email == resource.data.email &&
-        resource.data.status == 'pending_verification'
-      );
+      allow delete: if isAdmin();
     }
 
-    // Works / Products
-    match /works/{workId} {
+    // News Collection: Publicly readable, only Admins can write.
+    match /news/{newsId} {
       allow read: if true;
       allow write: if isAdmin();
     }

@@ -331,7 +331,7 @@ function Footer({ onShowTerms }) {
         <footer className="bg-white border-t border-gray-200 mt-12 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">S</div>
+                    <img src="logo.png" alt="Logo" className="w-8 h-8 object-contain" />
                     <span className="font-bold text-gray-900">Shades of Hue</span>
                 </div>
                 <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
@@ -365,7 +365,7 @@ function Navbar({ user, role, onNavigate, onSignOut, currentView }) {
                 <div className="flex justify-between h-20">
                     <div className="flex items-center">
                         <button onClick={() => onNavigate('home')} className="flex-shrink-0 flex items-center gap-3 cursor-pointer group">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform duration-300">S</div>
+                            <img src="logo.png" alt="Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                             <span className="font-bold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-700 to-purple-600">Shades of Hue</span>
                         </button>
                     </div>
